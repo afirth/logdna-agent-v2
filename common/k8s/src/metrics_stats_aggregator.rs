@@ -198,7 +198,7 @@ fn print_pods(
 fn print_nodes(nodes: &Vec<NodeStats>) {
     for node in nodes {
         println!(
-            r#"{{"_app":{}, "kube":{}}}"#, String::from("logdna-reporter"),
+            r#"{{"kube":{}}}"#, 
             serde_json::to_string(&node).unwrap_or(String::from(""))
         );
     }
@@ -206,7 +206,7 @@ fn print_nodes(nodes: &Vec<NodeStats>) {
 
 fn print_cluster_stats(cluster_stats: &ClusterStats) {
     println!(
-        r#"{{"_app":{}, kube":{}}}"#, String::from("logdna-reporter"),
+        r#"{{"kube":{}}}"#, 
         serde_json::to_string(&cluster_stats).unwrap_or(String::from(""))
     )
 }

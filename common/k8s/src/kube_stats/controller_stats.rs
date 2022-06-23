@@ -1,11 +1,11 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct ControllerStats {
     pub containers_ready: i32,
     pub containers_total: i32,
     pub pods_ready: i32,
-    pub pods_total: i32
+    pub pods_total: i32,
 }
 
 impl ControllerStats {
@@ -40,5 +40,4 @@ impl ControllerStats {
         self.pods_ready = value.pods_ready;
         self.pods_total = value.pods_total;
     }
-
 }

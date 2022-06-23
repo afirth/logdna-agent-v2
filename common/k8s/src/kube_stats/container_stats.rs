@@ -245,3 +245,253 @@ impl ContainerStatsBuilder<'_> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use chrono::{Utc};
+    use k8s_openapi::{
+        api::core::v1::{ResourceRequirements, ContainerStateRunning, ContainerStateTerminated, ContainerStateWaiting}, apimachinery::pkg::{api::resource::Quantity, apis::meta::v1::Time},
+    };
+    use std::collections::BTreeMap;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_create_running_container_stats() {
+
+        let resource = create_resource_default();
+        let state = create_state("running".to_string());
+        let status = create_status(None);
+        let container = create_container(resource);
+        let container_builder = 
+            ContainerStatsBuilder::new(&container, &status, &state, "1", "1");
+
+        let result = container_builder.build();
+
+        assert_eq!(result.image, "test-image".to_string());
+        assert_eq!(result.image_tag, "1234:1234".to_string());
+        assert_eq!(result.memory_usage, 1);
+        assert_eq!(result.cpu_usage, 1000);
+        assert_eq!(result.state, "Running".to_string());
+
+        assert_eq!(result.last_finished, None);
+        assert_eq!(result.last_started, None);
+        assert_eq!(result.last_reason, String::from(""));
+        assert_eq!(result.last_state, String::from(""));
+        assert_eq!(result.state, "Running".to_string());
+    }
+
+    #[tokio::test]
+    async fn test_create_running_prev_waiting_container_stats() {
+
+        let resource = create_resource_default();
+        let state = create_state("running".to_string());
+        let prev_state = create_state("waiting".to_string());
+        let status = create_status(Some(prev_state));
+        let container = create_container(resource);
+        let container_builder = 
+            ContainerStatsBuilder::new(&container, &status, &state, "1", "1");
+
+        let result = container_builder.build();
+
+        assert_eq!(result.state, "Running".to_string());
+        assert_eq!(result.last_state, "Waiting".to_string());
+        assert_eq!(result.last_finished, None);
+    }
+
+    #[tokio::test]
+    async fn test_create_running_prev_terminated_container_stats() {
+
+        let resource = create_resource_default();
+        let state = create_state("running".to_string());
+        let prev_state = create_state("terminated".to_string());
+        let status = create_status(Some(prev_state));
+        let container = create_container(resource);
+        let container_builder = 
+            ContainerStatsBuilder::new(&container, &status, &state, "1", "1");
+
+        let result = container_builder.build();
+
+        assert_eq!(result.state, "Running".to_string());
+        assert_eq!(result.last_state, "Terminated".to_string());
+        assert!(result.last_finished.is_some());
+        assert!(result.last_started.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_bad_limits_bad_requests_container_stats() {
+
+        let resource = create_resource_bad();
+        let state = create_state("running".to_string());
+        let prev_state = create_state("terminated".to_string());
+        let status = create_status(Some(prev_state));
+        let container = create_container(resource);
+        let container_builder = 
+            ContainerStatsBuilder::new(&container, &status, &state, "1", "1");
+
+        let result = container_builder.build();
+
+        assert_eq!(result.cpu_limit, Some(0));
+        assert_eq!(result.cpu_request, Some(0));
+        assert_eq!(result.memory_limit, Some(0));
+        assert_eq!(result.memory_request, Some(0));
+    }
+
+
+    fn create_state(state: String) -> ContainerState {
+
+        let mut running_state = None;
+        let mut terminated_state = None;
+        let mut waiting_state = None;
+
+        if state.eq(&"running".to_string()) {
+            running_state = Some(ContainerStateRunning {
+                started_at: Some(Time {
+                    0: Utc::now()
+                }),
+            })
+        }
+        else if state.eq(&"terminated".to_string()) {
+            terminated_state = Some(ContainerStateTerminated {
+                container_id: None,
+                exit_code: 0,
+                finished_at: Some(Time {
+                    0: Utc::now()
+                }),
+                message: Some("message".to_string()),
+                reason: Some("reason".to_string()),
+                signal: None,
+                started_at: Some(Time {
+                    0: Utc::now()
+                }),
+            })
+        }
+        else if state.eq(&"waiting".to_string()) {
+            waiting_state = Some(ContainerStateWaiting {
+                message: Some("reason".to_string()),
+                reason: None,
+            })
+        }
+
+        ContainerState {
+            running: running_state,
+            terminated: terminated_state,
+            waiting: waiting_state,
+        }
+    }
+
+    fn create_status(prev_state: Option<ContainerState>) -> ContainerStatus {
+        ContainerStatus {
+            container_id: Some("container".to_string()),
+            image: "image".to_string(),
+            image_id: "image".to_string(),
+            last_state: prev_state,
+            name: "container_name".to_string(),
+            ready: true,
+            restart_count: 0,
+            started: None,
+            state: None,
+        }
+    }
+
+    fn create_container(resource: ResourceRequirements) -> Container {
+        Container {
+            args: None,
+            command: None,
+            env: None,
+            env_from: None,
+            image: Some("test-image:1234:1234".to_string()),
+            image_pull_policy: Some("test-sometimes:1234:1234".to_string()),
+            lifecycle: None,
+            liveness_probe: None,
+            name: "container-name".to_string(),
+            ports: None,
+            readiness_probe: None,
+            resources: Some(resource),
+            security_context: None,
+            startup_probe: None,
+            stdin: None,
+            stdin_once: None,
+            termination_message_path: None,
+            termination_message_policy: None,
+            tty: None,
+            volume_devices: None,
+            volume_mounts: None,
+            working_dir: None,
+        }
+    }
+
+    fn create_resource_default() -> ResourceRequirements {
+        let mut b_tree_limits: BTreeMap<String, Quantity> = BTreeMap::new();
+        b_tree_limits.insert(
+            "cpu".to_string(),
+            Quantity {
+                0: "123".to_string(),
+            },
+        );
+        b_tree_limits.insert(
+            "memory".to_string(),
+            Quantity {
+                0: "123".to_string(),
+            },
+        );
+
+        let mut b_tree_requests = BTreeMap::new();
+        b_tree_requests.insert(
+            "cpu".to_string(),
+            Quantity {
+                0: "123".to_string(),
+            },
+        );
+        b_tree_requests.insert(
+            "memory".to_string(),
+            Quantity {
+                0: "123".to_string(),
+            },
+        );
+
+        let resource = ResourceRequirements {
+            limits: Some(b_tree_limits),
+            requests: Some(b_tree_requests),
+        };
+
+        resource
+    }
+
+    fn create_resource_bad() -> ResourceRequirements {
+        let mut b_tree_limits: BTreeMap<String, Quantity> = BTreeMap::new();
+        b_tree_limits.insert(
+            "cpu".to_string(),
+            Quantity {
+                0: "not a limit".to_string(),
+            },
+        );
+        b_tree_limits.insert(
+            "memory".to_string(),
+            Quantity {
+                0: "not a limit".to_string(),
+            },
+        );
+
+        let mut b_tree_requests = BTreeMap::new();
+        b_tree_requests.insert(
+            "cpu".to_string(),
+            Quantity {
+                0: "not a request".to_string(),
+            },
+        );
+        b_tree_requests.insert(
+            "memory".to_string(),
+            Quantity {
+                0: "not a request".to_string(),
+            },
+        );
+
+        let resource = ResourceRequirements {
+            limits: Some(b_tree_limits),
+            requests: Some(b_tree_requests),
+        };
+
+        resource
+    }
+}
