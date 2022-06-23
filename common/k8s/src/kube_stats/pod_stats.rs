@@ -176,7 +176,6 @@ mod tests {
         assert_eq!(result.namespace, "namespace".to_string());
     }
 
-
     #[tokio::test]
     async fn test_create_no_spec() {
     

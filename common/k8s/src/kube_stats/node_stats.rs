@@ -2,9 +2,7 @@ use chrono::Local;
 use k8s_openapi::api::core::v1::Node;
 use serde::{Deserialize, Serialize};
 
-use super::helpers::{
-    convert_cpu_usage_to_milli, convert_memory_usage_to_bytes
-};
+use super::helpers::{convert_cpu_usage_to_milli, convert_memory_usage_to_bytes};
 
 const CPU_MULTIPLIER: i64 = 1000;
 
@@ -154,7 +152,7 @@ impl NodeStatsBuilder<'_> {
         let status = &self.n.status;
         let spec = &self.n.spec;
 
-        let containers_init = 0;
+        let containers_init = self.n_containers.containers_init;
         let containers_ready = self.n_containers.containers_ready;
         let containers_running = self.n_containers.containers_running;
         let containers_terminated = self.n_containers.containers_terminated;
@@ -441,5 +439,273 @@ impl NodePodStats {
                 self.pods_unknown += 1;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use chrono::Utc;
+    use k8s_openapi::{
+        api::core::v1::{Node, NodeAddress, NodeCondition, NodeSpec, NodeStatus, NodeSystemInfo},
+        apimachinery::pkg::{api::resource::Quantity, apis::meta::v1::Time},
+    };
+    use kube::api::ObjectMeta;
+
+    use super::{NodeContainerStats, NodePodStats, NodeStatsBuilder};
+
+    #[tokio::test]
+    async fn test() {
+        let allocatable = create_allocatable_default();
+        let capacity = create_capacity_default();
+
+        let node_pod_stats = NodePodStats::new();
+        let node_container_stats = NodeContainerStats::new();
+
+        let status = create_status(Some(capacity), Some(allocatable), true, true, true);
+        let node = create_node(status);
+        let builder =
+            NodeStatsBuilder::new(&node, &node_pod_stats, &node_container_stats, "1", "1");
+
+        let result = builder.build();
+
+        assert_eq!(result.node, "name".to_string());
+        assert_eq!(result.container_runtime_version, "version".to_string());
+        assert_eq!(result.containers_init, 0);
+        assert_eq!(result.containers_ready, 0);
+        assert_eq!(result.containers_running, 0);
+        assert_eq!(result.containers_terminated, 0);
+        assert_eq!(result.containers_total, 0);
+        assert_eq!(result.containers_waiting, 0);
+        assert_eq!(result.cpu_allocatable.unwrap(), 123000);
+        assert_eq!(result.cpu_capacity.unwrap(), 123000);
+        assert_eq!(result.cpu_usage, 1000);
+        assert_eq!(result.memory_usage, 1);
+        assert_eq!(result.ip, "a2".to_string());
+        assert_eq!(result.ip_external, "a1".to_string());
+        assert_eq!(result.kernel_version, "kernel".to_string());
+        assert_eq!(result.kubelet_version, "kubelet".to_string());
+        assert_eq!(result.memory_allocatable.unwrap(), 123);
+        assert_eq!(result.memory_capacity.unwrap(), 123);
+        assert_eq!(result.os_image, "os_image".to_string());
+        assert_eq!(result.pods_allocatable.unwrap(), 123);
+        assert_eq!(result.pods_capacity.unwrap(), 123);
+        assert_eq!(result.pods_failed, 0);
+        assert_eq!(result.pods_pending, 0);
+        assert_eq!(result.pods_running, 0);
+        assert_eq!(result.pods_succeeded, 0);
+        assert_eq!(result.pods_total, 0);
+        assert_eq!(result.pods_unknown, 0);
+        assert_eq!(result.ready, Some(true));
+        assert_eq!(result.ready_status, "true".to_string());
+        assert_eq!(result.ready_message, "message".to_string());
+    }
+
+    fn create_node(status: Option<NodeStatus>) -> Node {
+        let spec = create_spec();
+
+        let meta = ObjectMeta {
+            annotations: None,
+            cluster_name: None,
+            creation_timestamp: Some(Time { 0: Utc::now() }),
+            deletion_grace_period_seconds: None,
+            deletion_timestamp: None,
+            finalizers: None,
+            generate_name: None,
+            generation: None,
+            labels: None,
+            managed_fields: None,
+            name: Some("name".to_string()),
+            namespace: Some("namespace".to_string()),
+            owner_references: None,
+            resource_version: None,
+            self_link: None,
+            uid: None,
+        };
+
+        Node {
+            metadata: meta,
+            spec: spec,
+            status: status,
+        }
+    }
+
+    fn create_spec() -> Option<NodeSpec> {
+        Some(NodeSpec {
+            config_source: None,
+            external_id: None,
+            pod_cidr: None,
+            pod_cidrs: None,
+            provider_id: None,
+            taints: None,
+            unschedulable: Some(true),
+        })
+    }
+
+    fn create_status(
+        capacity: Option<BTreeMap<String, Quantity>>,
+        allocatable: Option<BTreeMap<String, Quantity>>,
+        populate_addresses: bool,
+        populate_conditions: bool,
+        populate_node_info: bool,
+    ) -> Option<NodeStatus> {
+        let mut address = None;
+        let mut conditions = None;
+        let mut node_info = None;
+
+        if populate_addresses {
+            let mut address_vec = Vec::<NodeAddress>::new();
+            address_vec.push(NodeAddress {
+                address: "a1".to_string(),
+                type_: "externalip".to_string(),
+            });
+            address_vec.push(NodeAddress {
+                address: "a2".to_string(),
+                type_: "internalip".to_string(),
+            });
+
+            address = Some(address_vec);
+        }
+
+        if populate_conditions {
+            let mut conditions_vec = Vec::<NodeCondition>::new();
+            conditions_vec.push(NodeCondition {
+                last_heartbeat_time: Some(Time { 0: Utc::now() }),
+                last_transition_time: Some(Time { 0: Utc::now() }),
+                message: Some("message".to_string()),
+                reason: Some("reason".to_string()),
+                status: "true".to_string(),
+                type_: "ready".to_string(),
+            });
+
+            conditions = Some(conditions_vec)
+        }
+
+        if populate_node_info {
+            node_info = Some(NodeSystemInfo {
+                architecture: "arch".to_string(),
+                boot_id: "boot".to_string(),
+                container_runtime_version: "version".to_string(),
+                kernel_version: "kernel".to_string(),
+                kube_proxy_version: "proxy".to_string(),
+                kubelet_version: "kubelet".to_string(),
+                machine_id: "id".to_string(),
+                operating_system: "opsys".to_string(),
+                os_image: "os_image".to_string(),
+                system_uuid: "sysid".to_string(),
+            });
+        }
+
+        Some(NodeStatus {
+            addresses: address,
+            allocatable: allocatable,
+            capacity: capacity,
+            conditions: conditions,
+            config: None,
+            daemon_endpoints: None,
+            images: None,
+            node_info: node_info,
+            phase: Some("phase".to_string()),
+            volumes_attached: None,
+            volumes_in_use: None,
+        })
+    }
+
+    fn create_allocatable_default() -> BTreeMap<String, Quantity> {
+        let mut allocatable: BTreeMap<String, Quantity> = BTreeMap::new();
+        allocatable.insert(
+            "cpu".to_string(),
+            Quantity {
+                0: "123".to_string(),
+            },
+        );
+        allocatable.insert(
+            "memory".to_string(),
+            Quantity {
+                0: "123".to_string(),
+            },
+        );
+        allocatable.insert(
+            "pods".to_string(),
+            Quantity {
+                0: "123".to_string(),
+            },
+        );
+
+        allocatable
+    }
+
+    fn create_allocatable_bad() -> BTreeMap<String, Quantity> {
+        let mut allocatable: BTreeMap<String, Quantity> = BTreeMap::new();
+        allocatable.insert(
+            "cpu".to_string(),
+            Quantity {
+                0: "ab".to_string(),
+            },
+        );
+        allocatable.insert(
+            "memory".to_string(),
+            Quantity {
+                0: "ab".to_string(),
+            },
+        );
+        allocatable.insert(
+            "pods".to_string(),
+            Quantity {
+                0: "ab".to_string(),
+            },
+        );
+
+        allocatable
+    }
+
+    fn create_capacity_default() -> BTreeMap<String, Quantity> {
+        let mut capacity: BTreeMap<String, Quantity> = BTreeMap::new();
+        capacity.insert(
+            "cpu".to_string(),
+            Quantity {
+                0: "123".to_string(),
+            },
+        );
+        capacity.insert(
+            "memory".to_string(),
+            Quantity {
+                0: "123".to_string(),
+            },
+        );
+        capacity.insert(
+            "pods".to_string(),
+            Quantity {
+                0: "123".to_string(),
+            },
+        );
+
+        capacity
+    }
+
+    fn create_capacity_bad() -> BTreeMap<String, Quantity> {
+        let mut capacity: BTreeMap<String, Quantity> = BTreeMap::new();
+        capacity.insert(
+            "cpu".to_string(),
+            Quantity {
+                0: "ab".to_string(),
+            },
+        );
+        capacity.insert(
+            "memory".to_string(),
+            Quantity {
+                0: "ab".to_string(),
+            },
+        );
+
+        capacity.insert(
+            "pods".to_string(),
+            Quantity {
+                0: "ab".to_string(),
+            },
+        );
+
+        capacity
     }
 }
