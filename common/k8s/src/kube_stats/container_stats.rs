@@ -337,7 +337,6 @@ mod tests {
         assert_eq!(result.memory_request, Some(0));
     }
 
-
     fn create_state(state: String) -> ContainerState {
 
         let mut running_state = None;

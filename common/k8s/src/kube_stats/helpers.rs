@@ -26,7 +26,8 @@ pub fn convert_cpu_usage_to_milli(cpu: &str) -> i32 {
         }
         "n" => {}
         &_ => {
-            error!("Unknown CPU unit")
+            error!("Unknown CPU unit");
+            return 0;
         }
     }
 
@@ -78,4 +79,115 @@ pub fn convert_memory_usage_to_bytes(memory: &str) -> i64 {
     }
 
     return parsed_value * multiplier;
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_cpu_empty() {
+        let result = convert_cpu_usage_to_milli("");
+
+        assert_eq!(result, 0);
+    }
+
+    #[tokio::test]
+    async fn test_cpu_unit_empty() {
+        let result = convert_cpu_usage_to_milli("100");
+
+        assert_eq!(result, 100000);
+    }
+
+    #[tokio::test]
+    async fn test_unknown_cpu_unit() {
+        let result = convert_cpu_usage_to_milli("100rrr");
+
+        assert_eq!(result, 0);
+    }
+
+    #[tokio::test]
+    async fn test_cpu_m() {
+        let result = convert_cpu_usage_to_milli("100m");
+
+        assert_eq!(result, 100);
+    }
+
+    #[tokio::test]
+    async fn test_cpu_u() {
+        let result = convert_cpu_usage_to_milli("1000u");
+
+        assert_eq!(result, 1);
+    }
+
+    #[tokio::test]
+    async fn test_less_than_1_converted_cpu_u() {
+        let result = convert_cpu_usage_to_milli("10u");
+
+        assert_eq!(result, 1);
+    }
+
+    #[tokio::test]
+    async fn test_memory_empty() {
+        let result = convert_memory_usage_to_bytes("");
+
+        assert_eq!(result, 0);
+    }
+
+    #[tokio::test]
+    async fn test_memory_empty_but_unit() {
+        let result = convert_memory_usage_to_bytes("ki");
+
+        assert_eq!(result, 0);
+    }
+
+    #[tokio::test]
+    async fn test_memory_no_unit() {
+        let result = convert_memory_usage_to_bytes("1000");
+
+        assert_eq!(result, 1000);
+    }
+
+    #[tokio::test]
+    async fn test_memory_mi() {
+        let result = convert_memory_usage_to_bytes("1000mi");
+
+        assert_eq!(result, 1048576000);
+    }
+
+    #[tokio::test]
+    async fn test_memory_gi() {
+        let result = convert_memory_usage_to_bytes("1000gi");
+
+        assert_eq!(result, 1073741824000);
+    }
+
+    #[tokio::test]
+    async fn test_memory_ti() {
+        let result = convert_memory_usage_to_bytes("1000ti");
+
+        assert_eq!(result, 1099511627776000);
+    }
+
+    #[tokio::test]
+    async fn test_memory_k() {
+        let result = convert_memory_usage_to_bytes("1000k");
+
+        assert_eq!(result, 1000000);
+    }
+
+    #[tokio::test]
+    async fn test_memory_m() {
+        let result = convert_memory_usage_to_bytes("1000m");
+
+        assert_eq!(result, 1000000000);
+    }
+
+    #[tokio::test]
+    async fn test_memory_g() {
+        let result = convert_memory_usage_to_bytes("1000g");
+
+        assert_eq!(result, 1000000000000);
+    }
 }

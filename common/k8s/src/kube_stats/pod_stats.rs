@@ -148,3 +148,148 @@ fn get_controller_details(owners: &Option<Vec<OwnerReference>>) -> (String, Stri
 
     return ("".to_string(), "".to_string());
 }
+
+
+#[cfg(test)]
+mod tests {
+    use chrono::Utc;
+    use k8s_openapi::{api::core::v1::{Pod, PodSpec, PodStatus}, apimachinery::pkg::apis::meta::v1::Time};
+    use kube::api::ObjectMeta;
+
+    use super::PodStatsBuilder;
+
+    #[tokio::test]
+    async fn test_create_pod() {
+    
+        let spec = create_spec();
+        let status = create_status();
+        let pod = create_pod(Some(spec), Some(status));
+
+        let pod_builder = PodStatsBuilder::new(&pod);
+        let result = pod_builder.build();
+
+        assert_eq!(result.ip, "ip".to_string());
+        assert_eq!(result.phase, "phase".to_string());
+        assert_eq!(result.priority_class, "p_class".to_string());
+        assert_eq!(result.node, "node_name".to_string());
+        assert_eq!(result.qos_class, "class".to_string());
+        assert_eq!(result.namespace, "namespace".to_string());
+    }
+
+
+    #[tokio::test]
+    async fn test_create_no_spec() {
+    
+        let status = create_status();
+        let pod = create_pod(None, Some(status));
+
+        let pod_builder = PodStatsBuilder::new(&pod);
+        let result = pod_builder.build();
+
+        assert_eq!(result.node, "".to_string());
+    }
+
+    #[tokio::test]
+    async fn test_create_no_status() {
+    
+        let spec = create_spec();
+        let pod = create_pod(Some(spec), None);
+
+        let pod_builder = PodStatsBuilder::new(&pod);
+        let result = pod_builder.build();
+
+        assert_eq!(result.phase, "".to_string());
+    }
+
+    fn create_pod(spec: Option<PodSpec>, status: Option<PodStatus>) -> Pod {
+
+        let meta = ObjectMeta {
+            annotations: None,
+            cluster_name: None,
+            creation_timestamp: Some(Time {
+                0: Utc::now()
+            }),
+            deletion_grace_period_seconds: None,
+            deletion_timestamp: None,
+            finalizers: None,
+            generate_name: None,
+            generation: None,
+            labels: None,
+            managed_fields: None,
+            name: Some("name".to_string()),
+            namespace: Some("namespace".to_string()),
+            owner_references: None,
+            resource_version: None,
+            self_link: None,
+            uid: None,
+        };
+
+        Pod {
+            metadata: meta,
+            spec,
+            status,
+        }
+    }
+
+    fn create_spec() -> PodSpec {
+        PodSpec {
+            active_deadline_seconds: None,
+            affinity: None,
+            automount_service_account_token: None,
+            containers: Vec::new(),
+            dns_config: None,
+            dns_policy: None,
+            enable_service_links: None,
+            ephemeral_containers: None,
+            host_aliases: None,
+            host_ipc: None,
+            host_network: None,
+            host_pid: None,
+            hostname: None,
+            image_pull_secrets:None,
+            init_containers: None,
+            node_name: Some("node_name".to_string()),
+            node_selector: None,
+            os: None,
+            overhead: None,
+            preemption_policy: None,
+            priority: Some(222),
+            priority_class_name: Some("p_class".to_string()),
+            readiness_gates: None,
+            restart_policy: None,
+            runtime_class_name: None,
+            scheduler_name: None,
+            security_context: None,
+            service_account: None,
+            service_account_name: None,
+            set_hostname_as_fqdn: None,
+            share_process_namespace: None,
+            subdomain: None,
+            termination_grace_period_seconds: None,
+            tolerations: None,
+            topology_spread_constraints: None,
+            volumes: None,
+        }
+    }
+
+    fn create_status() -> PodStatus {
+ 
+        PodStatus {
+            conditions: None,
+            container_statuses: None,
+            ephemeral_container_statuses: None,
+            host_ip: None,
+            init_container_statuses: None,
+            message: None,
+            nominated_node_name: None,
+            phase: Some("phase".to_string()),
+            pod_ip: Some("ip".to_string()),
+            pod_ips: None,
+            qos_class: Some("class".to_string()),
+            reason: None,
+            start_time: Some(Time {
+                0: Utc::now()
+            }),
+        }
+    }
+}
