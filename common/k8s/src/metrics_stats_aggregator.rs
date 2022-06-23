@@ -14,11 +14,12 @@ use std::time::Duration;
 use tokio::time::sleep;
 
 use crate::kube_stats::{
+    cluster_stats::ClusterStats,
     container_stats::ContainerStats,
     controller_stats::ControllerStats,
     extended_pod_stats::ExtendedPodStats,
     node_stats::{NodeContainerStats, NodePodStats, NodeStats},
-    pod_stats::PodStats, cluster_stats::ClusterStats,
+    pod_stats::PodStats,
 };
 
 pub struct MetricsServerAggregator {
@@ -61,8 +62,6 @@ async fn process_reporter_info(client: Client) -> anyhow::Result<()> {
     let mut extended_pod_stats: Vec<ExtendedPodStats> = Vec::new();
     let mut node_stats: Vec<NodeStats> = Vec::new();
 
-    let mut cluster_stats = ClusterStats::new();
-
     build_pod_metric_map(pod_metrics, &mut pod_usage_map);
     process_pods(
         pods,
@@ -82,7 +81,10 @@ async fn process_reporter_info(client: Client) -> anyhow::Result<()> {
         &mut node_pod_counts_map,
         &mut node_container_counts_map,
     );
-    print_nodes(node_stats);
+    print_nodes(&node_stats);
+
+    let cluster_stats = build_cluster_stats(&node_stats);
+    print_cluster_stats(&cluster_stats);
 
     Ok(())
 }
@@ -126,6 +128,46 @@ fn build_node_metric_map(
     }
 }
 
+fn build_cluster_stats(node_stats: &Vec<NodeStats>) -> ClusterStats {
+    let mut cluster_stats = ClusterStats::new();
+
+    for node_stat in node_stats {
+        cluster_stats.containers_init += node_stat.containers_init;
+        cluster_stats.containers_ready += node_stat.containers_ready;
+        cluster_stats.containers_running += node_stat.containers_running;
+        cluster_stats.containers_terminated += node_stat.containers_terminated;
+        cluster_stats.containers_total += node_stat.containers_total;
+        cluster_stats.containers_waiting += node_stat.containers_waiting;
+        cluster_stats.cpu_allocatable += node_stat.cpu_allocatable.unwrap_or(0);
+        cluster_stats.cpu_capacity += node_stat.cpu_capacity.unwrap_or(0);
+        cluster_stats.cpu_usage += node_stat.cpu_usage;
+        cluster_stats.memory_allocatable += node_stat.memory_allocatable.unwrap_or(0);
+        cluster_stats.memory_capacity += node_stat.memory_capacity.unwrap_or(0);
+        cluster_stats.memory_usage += node_stat.memory_usage;
+        cluster_stats.pods_allocatable += node_stat.pods_allocatable.unwrap_or(0);
+        cluster_stats.pods_capacity += node_stat.pods_capacity.unwrap_or(0);
+        cluster_stats.pods_failed += node_stat.pods_failed;
+        cluster_stats.pods_pending += node_stat.pods_pending;
+        cluster_stats.pods_running += node_stat.pods_running;
+        cluster_stats.pods_succeeded += node_stat.pods_succeeded;
+        cluster_stats.pods_total += node_stat.pods_total;
+        cluster_stats.pods_unknown += node_stat.pods_unknown;
+        cluster_stats.nodes_total += 1;
+
+        if node_stat.ready.unwrap_or(false) {
+            cluster_stats.nodes_ready += 1;
+        } else {
+            cluster_stats.nodes_notready += 1;
+        }
+
+        if node_stat.unschedulable.unwrap_or(false) {
+            cluster_stats.nodes_unschedulable += 1;
+        }
+    }
+
+    cluster_stats
+}
+
 fn print_pods(
     extended_pod_stats: Vec<ExtendedPodStats>,
     controller_map: HashMap<String, ControllerStats>,
@@ -146,20 +188,27 @@ fn print_pods(
                 .copy_stats(controller_stats.unwrap());
         }
 
-        info!(
+        println!(
             r#"{{"kube":{}}}"#,
             serde_json::to_string(&translated_pod_container).unwrap_or(String::from(""))
         );
     }
 }
 
-fn print_nodes(nodes: Vec<NodeStats>) {
+fn print_nodes(nodes: &Vec<NodeStats>) {
     for node in nodes {
-        info!(
-            r#"{{"kube":{}}}"#,
+        println!(
+            r#"{{"_app":{}, "kube":{}}}"#, String::from("logdna-reporter"),
             serde_json::to_string(&node).unwrap_or(String::from(""))
         );
     }
+}
+
+fn print_cluster_stats(cluster_stats: &ClusterStats) {
+    println!(
+        r#"{{"_app":{}, kube":{}}}"#, String::from("logdna-reporter"),
+        serde_json::to_string(&cluster_stats).unwrap_or(String::from(""))
+    )
 }
 
 fn process_pods(

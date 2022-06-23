@@ -1,4 +1,9 @@
+use serde::{Serialize, Deserialize};
+
+#[derive(Serialize, Deserialize)]
 pub struct ClusterStats {
+    pub resource: String,
+    pub r#type: String,
     pub containers_init: i32,
     pub containers_ready: i32,
     pub containers_running: i32,
@@ -7,7 +12,7 @@ pub struct ClusterStats {
     pub containers_waiting: i32,
     pub cpu_allocatable: i64,
     pub cpu_capacity: i64,
-    pub cpu_usage: i64,
+    pub cpu_usage: i32,
     pub memory_allocatable: i64,
     pub memory_capacity: i64,
     pub memory_usage: i64,
@@ -52,6 +57,8 @@ impl ClusterStats {
             pods_succeeded: 0,
             pods_unknown: 0,
             pods_total: 0,
+            resource: "cluster".to_string(),
+            r#type: "metric".to_string(),
         }
     }
 }

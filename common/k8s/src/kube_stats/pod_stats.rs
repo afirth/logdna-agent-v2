@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct PodStats {
+    pub resource: String,
+    pub r#type: String,
     #[serde(skip_serializing_if = "String::is_empty")]
     pub controller: String,
     #[serde(skip_serializing_if = "String::is_empty")]
@@ -27,8 +29,6 @@ pub struct PodStats {
     pub priority: Option<i32>,
     #[serde(skip_serializing_if = "String::is_empty")]
     pub qos_class: String,
-    pub resource: String,
-    pub r#type: String,
 }
 
 impl PodStats {
@@ -95,7 +95,7 @@ impl PodStatsBuilder<'_> {
             Some(status) => {
                 if status.start_time.is_some() {
                     let pod_created = status.start_time.clone().unwrap();
-                    
+
                     pod_age = Local::now()
                         .signed_duration_since(pod_created.0)
                         .num_milliseconds();
