@@ -149,7 +149,6 @@ fn get_controller_details(owners: &Option<Vec<OwnerReference>>) -> (String, Stri
     return ("".to_string(), "".to_string());
 }
 
-
 #[cfg(test)]
 mod tests {
     use chrono::Utc;

@@ -22,11 +22,11 @@ use crate::kube_stats::{
     pod_stats::PodStats,
 };
 
-pub struct MetricsServerAggregator {
+pub struct MetricsStatsAggregator {
     pub client: Client,
 }
 
-impl MetricsServerAggregator {
+impl MetricsStatsAggregator {
     pub fn new(client: Client) -> Self {
         Self { client }
     }
@@ -198,7 +198,7 @@ fn print_pods(
 fn print_nodes(nodes: &Vec<NodeStats>) {
     for node in nodes {
         println!(
-            r#"{{"kube":{}}}"#, 
+            r#"{{"kube":{}}}"#,
             serde_json::to_string(&node).unwrap_or(String::from(""))
         );
     }
@@ -206,7 +206,7 @@ fn print_nodes(nodes: &Vec<NodeStats>) {
 
 fn print_cluster_stats(cluster_stats: &ClusterStats) {
     println!(
-        r#"{{"kube":{}}}"#, 
+        r#"{{"kube":{}}}"#,
         serde_json::to_string(&cluster_stats).unwrap_or(String::from(""))
     )
 }
@@ -453,4 +453,150 @@ async fn get_all_pods(client: Client) -> Result<ObjectList<Pod>, kube::Error> {
     let pods = api.list(&ListParams::default()).await;
 
     pods
+}
+
+#[cfg(test)]
+mod tests {
+
+    use std::collections::HashMap;
+
+    use k8s_openapi::api::core::v1::{Pod, Node};
+    use kube::api::{ObjectList, ListMeta};
+    use serde_json::Value;
+
+    use crate::{kube_stats::{node_stats::{NodeStats, NodeContainerStats, NodePodStats}, controller_stats::ControllerStats, extended_pod_stats::ExtendedPodStats}, metrics_stats_aggregator::{process_pods, process_nodes}};
+
+    use super::build_cluster_stats;
+
+    #[tokio::test]
+    async fn test_build_cluster_stats() {
+        let mut node_stats: Vec<NodeStats> = Vec::new();
+
+        let stats1 = generate_node();
+        let stats2 = generate_node();
+        let stats3 = generate_node();
+        let stats4 = generate_node();
+
+        node_stats.push(stats1);
+        node_stats.push(stats2);
+        node_stats.push(stats3);
+        node_stats.push(stats4);
+
+        let result = build_cluster_stats(&node_stats);
+
+        assert_eq!(result.containers_init, 4);
+        assert_eq!(result.containers_ready, 4);
+        assert_eq!(result.containers_running, 4);
+        assert_eq!(result.containers_terminated, 4);
+        assert_eq!(result.containers_total, 4);
+        assert_eq!(result.containers_waiting, 4);
+        assert_eq!(result.pods_allocatable, 4);
+        assert_eq!(result.pods_capacity, 4);
+        assert_eq!(result.pods_failed, 4);
+        assert_eq!(result.pods_pending, 4);
+        assert_eq!(result.pods_running, 4);
+        assert_eq!(result.pods_succeeded, 4);
+        assert_eq!(result.pods_total, 4);
+        assert_eq!(result.pods_unknown, 4);
+        assert_eq!(result.nodes_notready, 0);
+        assert_eq!(result.nodes_ready, 4);
+        assert_eq!(result.nodes_total, 4);
+        assert_eq!(result.nodes_unschedulable, 0);
+    }
+
+    #[tokio::test]
+    async fn test_process_pods_does_not_panic() {
+
+        let pods = ObjectList::<Pod> { metadata: ListMeta{ 
+            continue_: None, 
+            remaining_item_count: None, 
+            resource_version: None, 
+            self_link: None }, 
+            items: Vec::new() };
+        
+        let mut controller_map: HashMap<String, ControllerStats> = HashMap::new();
+        let mut node_pod_counts_map: HashMap<String, NodePodStats> = HashMap::new();
+        let mut node_container_counts_map: HashMap<String, NodeContainerStats> = HashMap::new();
+        let pod_usage_map: HashMap<String, Value> = HashMap::new();
+
+        let mut extended_pod_stats: Vec<ExtendedPodStats> = Vec::new();
+
+        process_pods(
+            pods,
+            &mut controller_map,
+            pod_usage_map,
+            &mut extended_pod_stats, 
+            &mut node_pod_counts_map,
+            &mut node_container_counts_map,
+        );
+    }
+
+    #[tokio::test]
+    async fn test_process_nodes_does_not_panic() {
+
+        let nodes = ObjectList::<Node> { metadata: ListMeta{ 
+            continue_: None, 
+            remaining_item_count: None, 
+            resource_version: None, 
+            self_link: None }, 
+            items: Vec::new() };
+        
+        let mut node_pod_counts_map: HashMap<String, NodePodStats> = HashMap::new();
+        let mut node_container_counts_map: HashMap<String, NodeContainerStats> = HashMap::new();
+        let node_usage_map: HashMap<String, Value> = HashMap::new();
+
+        let mut node_stats: Vec<NodeStats> = Vec::new();
+
+        process_nodes(
+            nodes,
+            node_usage_map,
+            &mut node_stats,
+            &mut node_pod_counts_map,
+            &mut node_container_counts_map,
+        );
+    }
+
+    fn generate_node() -> NodeStats {
+        NodeStats {
+            age: 0,
+            container_runtime_version: "".to_string(),
+            containers_init: 1,
+            containers_ready: 1,
+            containers_running: 1,
+            containers_terminated: 1,
+            containers_total: 1,
+            containers_waiting: 1,
+            cpu_allocatable: Some(1),
+            cpu_capacity: Some(1),
+            cpu_usage: 0,
+            created: 0,
+            ip_external: "".to_string(),
+            ip: "".to_string(),
+            kernel_version: "".to_string(),
+            kubelet_version: "".to_string(),
+            memory_allocatable: Some(1),
+            memory_capacity: Some(1),
+            memory_usage: 0,
+            node: "".to_string(),
+            os_image: "".to_string(),
+            pods_failed: 1,
+            pods_pending: 1,
+            pods_running: 1,
+            pods_succeeded: 1,
+            pods_total: 1,
+            pods_unknown: 1,
+            ready_heartbeat_age: 0,
+            ready_heartbeat_time: 0,
+            ready_message: "".to_string(),
+            ready_status: "".to_string(),
+            ready_transition_age: 0,
+            ready_transition_time: 0,
+            ready: Some(true),
+            unschedulable: None,
+            pods_allocatable: Some(1),
+            pods_capacity: Some(1),
+            resource: "node".to_string(),
+            r#type: "metric".to_string(),
+        }
+    }
 }
