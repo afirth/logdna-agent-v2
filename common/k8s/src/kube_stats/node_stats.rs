@@ -456,7 +456,7 @@ mod tests {
     use super::{NodeContainerStats, NodePodStats, NodeStatsBuilder};
 
     #[tokio::test]
-    async fn test() {
+    async fn test_build_node_stats() {
         let allocatable = create_allocatable_default();
         let capacity = create_capacity_default();
 
@@ -500,6 +500,101 @@ mod tests {
         assert_eq!(result.ready, Some(true));
         assert_eq!(result.ready_status, "true".to_string());
         assert_eq!(result.ready_message, "message".to_string());
+    }
+
+    #[tokio::test]
+    async fn test_no_addresses() {
+        let allocatable = create_allocatable_default();
+        let capacity = create_capacity_default();
+
+        let node_pod_stats = NodePodStats::new();
+        let node_container_stats = NodeContainerStats::new();
+
+        let status = create_status(Some(capacity), Some(allocatable), false, true, true);
+        let node = create_node(status);
+        let builder =
+            NodeStatsBuilder::new(&node, &node_pod_stats, &node_container_stats, "1", "1");
+
+        let result = builder.build();
+
+        assert_eq!(result.node, "name".to_string());
+        assert_eq!(result.ip, "".to_string());
+        assert_eq!(result.ip_external, "".to_string());
+    }
+
+    #[tokio::test]
+    async fn test_no_conditions() {
+        let allocatable = create_allocatable_default();
+        let capacity = create_capacity_default();
+
+        let node_pod_stats = NodePodStats::new();
+        let node_container_stats = NodeContainerStats::new();
+
+        let status = create_status(Some(capacity), Some(allocatable), true, false, true);
+        let node = create_node(status);
+        let builder =
+            NodeStatsBuilder::new(&node, &node_pod_stats, &node_container_stats, "1", "1");
+
+        let result = builder.build();
+
+        assert_eq!(result.node, "name".to_string());
+        assert_eq!(result.ready_status, "".to_string());
+    }
+
+    #[tokio::test]
+    async fn test_no_node_info() {
+        let allocatable = create_allocatable_default();
+        let capacity = create_capacity_default();
+
+        let node_pod_stats = NodePodStats::new();
+        let node_container_stats = NodeContainerStats::new();
+
+        let status = create_status(Some(capacity), Some(allocatable), true, true, false);
+        let node = create_node(status);
+        let builder =
+            NodeStatsBuilder::new(&node, &node_pod_stats, &node_container_stats, "1", "1");
+
+        let result = builder.build();
+
+        assert_eq!(result.node, "name".to_string());
+        assert_eq!(result.os_image, "".to_string());
+    }
+
+
+    #[tokio::test]
+    async fn test_bad_capacity() {
+        let allocatable = create_allocatable_default();
+        let capacity = create_capacity_bad();
+
+        let node_pod_stats = NodePodStats::new();
+        let node_container_stats = NodeContainerStats::new();
+
+        let status = create_status(Some(capacity), Some(allocatable), true, true, false);
+        let node = create_node(status);
+        let builder =
+            NodeStatsBuilder::new(&node, &node_pod_stats, &node_container_stats, "1", "1");
+
+        let result = builder.build();
+
+        assert_eq!(result.cpu_capacity, None);
+    }
+
+    #[tokio::test]
+    async fn test_bad_allocatable() {
+        let allocatable = create_allocatable_bad();
+        let capacity = create_capacity_default();
+
+        let node_pod_stats = NodePodStats::new();
+        let node_container_stats = NodeContainerStats::new();
+
+        let status = create_status(Some(capacity), Some(allocatable), true, true, false);
+        let node = create_node(status);
+        let builder =
+            NodeStatsBuilder::new(&node, &node_pod_stats, &node_container_stats, "1", "1");
+
+        let result = builder.build();
+
+        assert_eq!(result.cpu_allocatable, None);
     }
 
     fn create_node(status: Option<NodeStatus>) -> Node {
