@@ -179,8 +179,9 @@ integration-test: ## Run integration tests using image with additional tools
 	$(DOCKER_JOURNALD_DISPATCH) "--env LOGDNA_INGESTION_KEY=$(LOGDNA_INGESTION_KEY) --env LOGDNA_HOST=$(LOGDNA_HOST) --env RUST_BACKTRACE=full --env RUST_LOG=$(RUST_LOG)" "cargo test $(TARGET_DOCKER_ARG) $(FEATURES_ARG) --manifest-path bin/Cargo.toml $(TESTS) -- --nocapture $(TEST_THREADS_ARG)"
 
 .PHONY:k8s-test
-k8s-test: ## Run integration tests using k8s kind
-	$(DOCKER_KIND_DISPATCH) $(K8S_TEST_CREATE_CLUSTER) $(RUST_IMAGE) "--env RUST_LOG=$(RUST_LOG)" "cargo test $(TARGET_DOCKER_ARG) --manifest-path bin/Cargo.toml --features k8s_tests -- --nocapture"
+k8s-test: build-image-debian ## Run integration tests using k8s kind
+	$(DOCKER) tag $(REPO):$(IMAGE_TAG) $(REPO):local
+	IMAGE_TAG=$(IMAGE_TAG) $(DOCKER_KIND_DISPATCH) $(K8S_TEST_CREATE_CLUSTER) $(RUST_IMAGE) "--env RUST_LOG=$(RUST_LOG)" "cargo test $(TARGET_DOCKER_ARG) --manifest-path bin/Cargo.toml --features k8s_tests -- --nocapture"
 
 .PHONY:test-journald
 test-journald: ## Run journald unit tests
@@ -189,7 +190,7 @@ test-journald: ## Run journald unit tests
 
 .PHONY:bench
 bench:
-	$(BENCH_COMMAND) "--privileged --env RUST_BACKTRACE=full --env RUST_LOG=$(RUST_LOG)" "PERF=\$$(find /usr/bin -type f -wholename /usr/bin/perf\* | head -n1) cargo run --release --manifest-path bench/Cargo.toml --bin=throughput /dict.txt -o /tmp/out $(PROFILE) --file-history 3 --line-count 100000000 --file-size 20000000 && mv /tmp/flamegraph.svg ."
+	$(BENCH_COMMAND) "--privileged --env RUST_BACKTRACE=full --env RUST_LOG=$(RUST_LOG)" "PERF=\$$(find /usr/bin -type f -wholename /usr/bin/perf\* | head -n1) cargo run --release --manifest-path bench/Cargo.toml --bin=throughput /dict.txt -o /tmp/out $(PROFILE) --file-history 3 --line-count 100000000 --file-size 20000000 && ([ -z '$(PROFILE)' ] || mv /tmp/flamegraph.svg . )"
 
 .PHONY:clean
 clean: ## Clean all artifacts from the build process
@@ -366,6 +367,7 @@ build-image-debian: ## Build a docker image as specified in the Dockerfile.debia
 	$(DOCKER) build . -f Dockerfile.debian -t $(REPO):$(IMAGE_TAG) \
 		$(PULL_OPTS) \
 		--progress=plain \
+		--platform=linux/${DEB_ARCH_NAME_${ARCH}} \
 		--secret id=aws,src=$(AWS_SHARED_CREDENTIALS_FILE) \
 		--rm \
 		--build-arg BUILD_ENVS="$(BUILD_ENVS)" \
@@ -386,6 +388,7 @@ build-image-debug: ## Build a docker image as specified in the Dockerfile.debug
 	$(DOCKER) build . -f Dockerfile.debug -t $(REPO):$(IMAGE_TAG) \
 		$(PULL_OPTS) \
 		--progress=plain \
+		--platform=linux/${DEB_ARCH_NAME_${ARCH}} \
 		--secret id=aws,src=$(AWS_SHARED_CREDENTIALS_FILE) \
 		--rm \
 		--build-arg BUILD_ENVS="$(BUILD_ENVS)" \

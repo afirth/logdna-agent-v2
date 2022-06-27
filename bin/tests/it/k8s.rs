@@ -465,7 +465,7 @@ async fn create_agent_ds(
 
     //// Set up agent
     let ds = get_agent_ds_yaml(
-        "logdna-agent-kind:building",
+        "logdna-agent-v2:local",
         ingester_addr,
         "false",
         agent_name,
@@ -641,6 +641,9 @@ fn get_agent_ds_yaml(
                                 }
                             },
                             "securityContext": {
+                                "runAsUser": 5000,
+                                "runAsGroup": 5000,
+                                "fsGroup": 5000,
                                 "capabilities": {
                                     "add": [
                                         "DAC_READ_SEARCH"

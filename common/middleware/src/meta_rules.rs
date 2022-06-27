@@ -1,4 +1,5 @@
 use crate::{Middleware, Status};
+use config::env_vars;
 use http::types::body::{KeyValueMap, LineBufferMut};
 use lazy_static::lazy_static;
 use log::error;
@@ -6,16 +7,6 @@ use regex::bytes::Regex as RegexB;
 use regex::Regex;
 use std::collections::HashMap;
 use std::ops::Deref;
-
-/// Env config options
-static LOGDNA_META_APP: &str = "LOGDNA_META_APP";
-static LOGDNA_META_HOST: &str = "LOGDNA_META_HOST";
-static LOGDNA_META_ENV: &str = "LOGDNA_META_ENV";
-static LOGDNA_META_FILE: &str = "LOGDNA_META_FILE";
-static LOGDNA_META_K8S_FILE: &str = "LOGDNA_META_K8S_FILE";
-static LOGDNA_META_JSON: &str = "LOGDNA_META_JSON";
-static LOGDNA_META_ANNOTATIONS: &str = "LOGDNA_META_ANNOTATIONS";
-static LOGDNA_META_LABELS: &str = "LOGDNA_META_LABELS";
 
 static K8S_LOG_DIR: &str = "/var/log/containers/";
 
@@ -48,14 +39,14 @@ impl MetaRulesConfig {
     pub fn from_env() -> Self {
         let vars = os_env_hashmap();
         MetaRulesConfig {
-            app: vars.get(LOGDNA_META_APP).cloned(),
-            host: vars.get(LOGDNA_META_HOST).cloned(),
-            env: vars.get(LOGDNA_META_ENV).cloned(),
-            file: vars.get(LOGDNA_META_FILE).cloned(),
-            k8s_file: vars.get(LOGDNA_META_K8S_FILE).cloned(),
-            meta: vars.get(LOGDNA_META_JSON).cloned(),
-            annotations: vars.get(LOGDNA_META_ANNOTATIONS).cloned(),
-            labels: vars.get(LOGDNA_META_LABELS).cloned(),
+            app: vars.get(env_vars::META_APP).cloned(),
+            host: vars.get(env_vars::META_HOST).cloned(),
+            env: vars.get(env_vars::META_ENV).cloned(),
+            file: vars.get(env_vars::META_FILE).cloned(),
+            k8s_file: vars.get(env_vars::META_K8S_FILE).cloned(),
+            meta: vars.get(env_vars::META_JSON).cloned(),
+            annotations: vars.get(env_vars::META_ANNOTATIONS).cloned(),
+            labels: vars.get(env_vars::META_LABELS).cloned(),
         }
     }
 }
@@ -81,9 +72,6 @@ pub enum MetaRulesError {
     Config(String),
 }
 
-//"Invalid LOGDNA_META_ANNOTATIONS value: '{}', err: {}",
-//panic!("Invalid LOGDNA_META_LABELS value: '{}', err: {}", str, err)
-
 impl MetaRules {
     pub fn new(cfg: MetaRulesConfig) -> Result<MetaRules, MetaRulesError> {
         let obj = MetaRules {
@@ -98,7 +86,7 @@ impl MetaRules {
                 Some(str) => match serde_json::from_str(str.as_str()) {
                     Ok(kvp) => Ok(kvp),
                     Err(err) => Err(MetaRulesError::Config(format!(
-                        "Invalid LOGDNA_META_ANNOTATIONS value: '{}', err: '{}'",
+                        "Invalid MZ_META_ANNOTATIONS value: '{}', err: '{}'",
                         str, err
                     ))),
                 }?,
@@ -108,7 +96,7 @@ impl MetaRules {
                 Some(str) => match serde_json::from_str(str.as_str()) {
                     Ok(kvp) => Ok(kvp),
                     Err(err) => Err(MetaRulesError::Config(format!(
-                        "Invalid LOGDNA_META_LABELS value: '{}', err: '{}'",
+                        "Invalid MZ_META_LABELS value: '{}', err: '{}'",
                         str, err
                     ))),
                 }?,
@@ -262,7 +250,7 @@ impl MetaRules {
             let meta = substitute(over_meta.deref(), &meta_map);
             match serde_json::from_str(&meta) {
                 Ok(val) => if line.set_meta(val).is_err() {},
-                Err(err) => panic!("Invalid LOGDNA_META_JSON value: '{}', err: {}", meta, err),
+                Err(err) => panic!("Invalid MZ_META_JSON value: '{}', err: {}", meta, err),
             }
         }
         Status::Ok(line)
@@ -343,16 +331,17 @@ pub fn substitute(template: &str, variables: &HashMap<String, String>) -> String
 #[cfg(test)]
 mod tests {
     use crate::meta_rules::{os_env_hashmap, substitute};
+    use config::env_vars;
 
     #[test]
     fn test_meta_config() {
-        env::set_var(LOGDNA_META_APP, "some_app");
-        env::set_var(LOGDNA_META_HOST, "some_host");
-        env::set_var(LOGDNA_META_ENV, "some_env");
-        env::set_var(LOGDNA_META_FILE, "some_file");
-        env::set_var(LOGDNA_META_JSON, "some_json");
-        env::set_var(LOGDNA_META_ANNOTATIONS, "some_annotations");
-        env::set_var(LOGDNA_META_LABELS, "some_labels");
+        env::set_var(env_vars::META_APP, "some_app");
+        env::set_var(env_vars::META_HOST, "some_host");
+        env::set_var(env_vars::META_ENV, "some_env");
+        env::set_var(env_vars::META_FILE, "some_file");
+        env::set_var(env_vars::META_JSON, "some_json");
+        env::set_var(env_vars::META_ANNOTATIONS, "some_annotations");
+        env::set_var(env_vars::META_LABELS, "some_labels");
         let cfg = MetaRulesConfig::from_env();
         assert_eq!(cfg.app, Some("some_app".into()));
         assert_eq!(cfg.host, Some("some_host".into()));
