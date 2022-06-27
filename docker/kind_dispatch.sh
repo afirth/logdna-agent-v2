@@ -54,7 +54,8 @@ kind load docker-image $image --name $cluster_name
 kind load docker-image "socat:local" --name $cluster_name
 
 echo "Creating k8s resources"
-KUBECONFIG=$curpath/.kind_config_host kubectl apply -f $curpath/kind/test-resources.yaml
+KUBECONFIG=$curpath/.kind_config_host kubectl apply -f $curpath/kind/test-resources.yaml 
+KUBECONFIG=$curpath/.kind_config_host kubectl apply -f $curpath/kind/metrics-server.yaml 
 
 # Run the integration test binary in docker on the same network as the kubernetes cluster
 if [ "$HOST_MACHINE" = "Mac" ]; then

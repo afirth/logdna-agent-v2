@@ -2,7 +2,7 @@
 extern crate log;
 
 use futures::Stream;
-use k8s::metrics_stats_aggregator::MetricsServerAggregator;
+use k8s::metrics_stats_aggregator::MetricsStatsAggregator;
 use crate::stream_adapter::{StrictOrLazyLineBuilder, StrictOrLazyLines};
 use config::{Config, DbPath};
 use env_logger::Env;
@@ -208,7 +208,7 @@ async fn main() {
     let _metric_server_watcher = match create_k8s_client_default_from_env(metric_agent) {
         Ok(client) => {
 
-            let metric_server_watcher = MetricsServerAggregator::new(client);
+            let metric_server_watcher = MetricsStatsAggregator::new(client);
 
             tokio::spawn(async {
                 metric_server_watcher.start_metrics_call_task().await;

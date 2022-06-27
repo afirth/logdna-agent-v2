@@ -1,3 +1,5 @@
+use k8s::kube_stats::cluster_stats::ClusterStats;
+use k8s_openapi::apimachinery::pkg::version::Info;
 use pnet::datalink;
 use std::net::{SocketAddr, ToSocketAddrs};
 
@@ -386,6 +388,45 @@ async fn create_agent_ds(
                 ],
                 "resources": [
                     "pods"
+                ],
+                "verbs": [
+                    "get",
+                    "list",
+                    "watch"
+                ]
+            },
+            {
+                "apiGroups": [
+                    ""
+                ],
+                "resources": [
+                    "nodes"
+                ],
+                "verbs": [
+                    "get",
+                    "list",
+                    "watch"
+                ]
+            },
+            {
+                "apiGroups": [
+                    "metrics.k8s.io"
+                ],
+                "resources": [
+                    "pods"
+                ],
+                "verbs": [
+                    "get",
+                    "list",
+                    "watch"
+                ]
+            },
+            {
+                "apiGroups": [
+                    "metrics.k8s.io"
+                ],
+                "resources": [
+                    "nodes"
                 ],
                 "verbs": [
                     "get",
@@ -1295,6 +1336,106 @@ async fn test_k8s_startup_leases_off_start() {
         let map = received.lock().await;
         let result = map.iter().find(|(k, _)| k.contains(pod_name));
         assert!(result.is_some());
+
+        shutdown_handle();
+    });
+
+    server_result.unwrap();
+}
+
+#[derive(serde::Deserialize)]
+struct ReporterLineMeta {
+    #[serde(rename = "type")]
+    tag: String,
+}
+#[derive(serde::Deserialize)]
+struct ReporterLine {
+    kube: ReporterLineMeta,
+    // TODO: force a specific event and test for it's contents
+    // message: String
+}
+
+#[tokio::test]
+//#[cfg_attr(not(feature = "k8s_tests"), ignore)]
+async fn test_metric_stats_aggregator() {
+    let _ = env_logger::Builder::from_default_env().try_init();
+
+    let (server, received, shutdown_handle, ingester_addr) = common::start_http_ingester();
+    tokio::time::sleep(tokio::time::Duration::from_millis(5000)).await;
+
+    let client = Client::try_default().await.unwrap();
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(5000)).await;
+
+    let (server_result, _) = tokio::join!(server, async {
+        tokio::time::sleep(tokio::time::Duration::from_millis(5000)).await;
+
+        let agent_name = "metric-aggregator";
+        let agent_namespace = "metric-aggregator";
+
+        // Create Agent
+        let nss: Api<Namespace> = Api::all(client.clone());
+        let ns = serde_json::from_value(serde_json::json!({
+            "apiVersion": "v1",
+            "kind": "Namespace",
+            "metadata": {
+                "name": agent_namespace
+            }
+        }))
+        .unwrap();
+        nss.create(&PostParams::default(), &ns).await.unwrap();
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        let mock_ingester_socket_addr_str = create_mock_ingester_service(
+            client.clone(),
+            ingester_public_addr(ingester_addr),
+            "ingest-service",
+            agent_namespace,
+            80,
+        )
+        .await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(30_000)).await;
+
+        create_agent_ds(
+            client.clone(),
+            agent_name,
+            agent_namespace,
+            &mock_ingester_socket_addr_str,
+            "always",
+            "always",
+            "info",
+            "off",
+        )
+        .await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+
+        let map = received.lock().await;
+
+        let mut found_pod_log = false;
+        let mut found_node_log = false;
+        let mut found_cluster_log = false;
+        for (key, value) in map.iter() {
+            if !key.contains(agent_name) {
+                continue;  
+            }
+            for entry in &value.values {
+                if entry.contains("{\"resource\":\"cluster\"") {
+                    found_cluster_log = true;
+                }
+
+                else if entry.contains("{\"resource\":\"node\"") {
+                    found_node_log = true;
+                }
+
+                else if entry.contains("{\"resource\":\"container\"") {
+                    found_pod_log = true;
+                }
+            }
+        }
+        assert!(found_cluster_log);
+        assert!(found_node_log);
+        assert!(found_pod_log);
 
         shutdown_handle();
     });
