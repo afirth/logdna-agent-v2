@@ -124,7 +124,6 @@ fn check_fs_files(samples: &[Sample]) {
         fs_files.iter().any(|v| *v < fs_max),
         "at least one fs_files gauge should be lower than max"
     );
-
 }
 
 fn check_ingest_req_size(samples: &[Sample]) {
