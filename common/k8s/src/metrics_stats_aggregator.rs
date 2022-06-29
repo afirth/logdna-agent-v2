@@ -1,11 +1,13 @@
 use anyhow::Result;
 use core::result::Result::Ok;
 
+use futures::{stream, Stream, StreamExt};
+use http::types::body::LineBuilder;
+
 use k8s_openapi::api::core::v1::{Container, ContainerStatus, Node, Pod};
 use kube::{
     api::{Api, DynamicObject, GroupVersionKind, ListParams, ObjectList},
-    discovery::{self},
-    Client,
+    discovery, Client,
 };
 use serde_json::Value;
 
@@ -31,23 +33,41 @@ impl MetricsStatsAggregator {
         Self { client }
     }
 
-    pub async fn start_metrics_call_task(self) {
-        loop {
-            let result = self::process_reporter_info(self.client.clone()).await;
-
-            match result {
-                Ok(_) => {}
-                Err(e) => {
-                    error!("Failed To Gather Metrics Server Info {}", e)
-                }
-            }
-
+    pub fn start_metrics_call_task(self) -> impl Stream<Item = LineBuilder> {
+        stream::unfold(self.client.clone(), |client| async {
             sleep(Duration::from_millis(30000)).await;
-        }
+            Some((
+                match self::process_reporter_info(client.clone()).await {
+                    Ok((pods_strings, node_strings, cluster_stats_string)) => Some(
+                        stream::iter(
+                            pods_strings
+                                .into_iter()
+                                .chain(node_strings.into_iter())
+                                .chain(Some(cluster_stats_string).into_iter()),
+                        )
+                        .map(|line| {
+                            LineBuilder::new()
+                                .line(line)
+                                .file("logdna-reporter".to_string())
+                        }),
+                    ),
+                    Err(e) => {
+                        error!("Failed To Gather Metrics Server Info {}", e);
+                        None
+                    }
+                },
+                client,
+            ))
+        })
+            .filter_map(|x| async {
+                x
+            }).flatten()
     }
 }
 
-async fn process_reporter_info(client: Client) -> anyhow::Result<()> {
+async fn process_reporter_info(
+    client: Client,
+) -> anyhow::Result<(Vec<String>, Vec<String>, String)> {
     let pods = self::get_all_pods(client.clone()).await?;
     let nodes = self::get_all_nodes(client.clone()).await?;
     let pod_metrics = self::call_metric_api(&"PodMetrics", client.clone()).await?;
@@ -71,7 +91,7 @@ async fn process_reporter_info(client: Client) -> anyhow::Result<()> {
         &mut node_pod_counts_map,
         &mut node_container_counts_map,
     );
-    print_pods(extended_pod_stats, controller_map);
+    let pods_strings = print_pods(extended_pod_stats, controller_map);
 
     build_node_metric_map(node_metrics, &mut node_usage_map);
     process_nodes(
@@ -81,12 +101,12 @@ async fn process_reporter_info(client: Client) -> anyhow::Result<()> {
         &mut node_pod_counts_map,
         &mut node_container_counts_map,
     );
-    print_nodes(&node_stats);
+    let node_strings = print_nodes(&node_stats);
 
     let cluster_stats = build_cluster_stats(&node_stats);
-    print_cluster_stats(&cluster_stats);
+    let cluster_stats_string = print_cluster_stats(&cluster_stats);
 
-    Ok(())
+    Ok((pods_strings, node_strings, cluster_stats_string))
 }
 
 fn build_pod_metric_map(
@@ -171,7 +191,8 @@ fn build_cluster_stats(node_stats: &Vec<NodeStats>) -> ClusterStats {
 fn print_pods(
     extended_pod_stats: Vec<ExtendedPodStats>,
     controller_map: HashMap<String, ControllerStats>,
-) {
+) -> Vec<String> {
+    let mut pod_strings: Vec<String> = Vec::new();
     for mut translated_pod_container in extended_pod_stats {
         let controller_key = format!(
             "{}.{}.{}",
@@ -188,27 +209,36 @@ fn print_pods(
                 .copy_stats(controller_stats.unwrap());
         }
 
-        println!(
+        let display_str = format!(
             r#"{{"kube":{}}}"#,
             serde_json::to_string(&translated_pod_container).unwrap_or(String::from(""))
         );
+        println!("{}", display_str);
+        pod_strings.push(display_str)
     }
+    pod_strings
 }
 
-fn print_nodes(nodes: &Vec<NodeStats>) {
+fn print_nodes(nodes: &Vec<NodeStats>) -> Vec<String> {
+    let mut node_strings: Vec<String> = Vec::new();
     for node in nodes {
-        println!(
+        let node_str = format!(
             r#"{{"kube":{}}}"#,
             serde_json::to_string(&node).unwrap_or(String::from(""))
         );
+        println!("{}", node_str);
+        node_strings.push(node_str);
     }
+    node_strings
 }
 
-fn print_cluster_stats(cluster_stats: &ClusterStats) {
-    println!(
+fn print_cluster_stats(cluster_stats: &ClusterStats) -> String {
+    let cluster_string = format!(
         r#"{{"kube":{}}}"#,
         serde_json::to_string(&cluster_stats).unwrap_or(String::from(""))
-    )
+    );
+    println!("{}", cluster_string);
+    cluster_string
 }
 
 fn process_pods(
@@ -460,11 +490,18 @@ mod tests {
 
     use std::collections::HashMap;
 
-    use k8s_openapi::api::core::v1::{Pod, Node};
-    use kube::api::{ObjectList, ListMeta};
+    use k8s_openapi::api::core::v1::{Node, Pod};
+    use kube::api::{ListMeta, ObjectList};
     use serde_json::Value;
 
-    use crate::{kube_stats::{node_stats::{NodeStats, NodeContainerStats, NodePodStats}, controller_stats::ControllerStats, extended_pod_stats::ExtendedPodStats}, metrics_stats_aggregator::{process_pods, process_nodes}};
+    use crate::{
+        kube_stats::{
+            controller_stats::ControllerStats,
+            extended_pod_stats::ExtendedPodStats,
+            node_stats::{NodeContainerStats, NodePodStats, NodeStats},
+        },
+        metrics_stats_aggregator::{process_nodes, process_pods},
+    };
 
     use super::build_cluster_stats;
 

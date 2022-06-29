@@ -241,21 +241,20 @@ async fn _main() {
         }
     };
 
-    let _metric_server_watcher = match create_k8s_client_default_from_env(metric_agent) {
+    let metric_server_source = match create_k8s_client_default_from_env(metric_agent) {
         Ok(client) => {
-
             let metric_server_watcher = MetricsStatsAggregator::new(client);
-
-            tokio::spawn(async {
-                metric_server_watcher.start_metrics_call_task().await;
-            });
-
-        },
-        Err (e) => {
-            warn!("Unable to initialize kubernetes client for the reporter: {}", e);
+            Some(metric_server_watcher.start_metrics_call_task().map(StrictOrLazyLineBuilder::Strict))
+        }
+        Err(e) => {
+            warn!(
+                "Unable to initialize kubernetes client for the reporter: {}",
+                e
+            );
+            None
         }
     };
-    
+
     match LineRules::new(
         &config.log.line_exclusion_regex,
         &config.log.line_inclusion_regex,
@@ -364,11 +363,15 @@ async fn _main() {
     #[cfg(feature = "libjournald")]
     pin_mut!(journald_source);
 
+    pin_mut!(metric_server_source);
+
     let mut k8s_event_source: Option<std::pin::Pin<&mut _>> = k8s_event_source.as_pin_mut();
     let mut journalctl_source: Option<std::pin::Pin<&mut _>> = journalctl_source.as_pin_mut();
 
     #[cfg(feature = "libjournald")]
     let mut journald_source: Option<std::pin::Pin<&mut _>> = journald_source.as_pin_mut();
+
+    let mut metric_server_source: Option<std::pin::Pin<&mut _>> = metric_server_source.as_pin_mut();
 
     let mut sources: futures::stream::SelectAll<&mut (dyn Stream<Item = _> + Unpin)> =
         futures::stream::SelectAll::new();
@@ -394,7 +397,12 @@ async fn _main() {
         info!("Enabling k8s_event_source");
         sources.push(k)
     };
-    
+
+    if let Some(k) = metric_server_source.as_mut() {
+        info!("Enabling metrics_server_watcher");
+        sources.push(k)
+    };
+
     let lines_stream = sources.map(|line| match line {
         StrictOrLazyLineBuilder::Strict(mut line) => {
             if executor.process(&mut line).is_some() {
