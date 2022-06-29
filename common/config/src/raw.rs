@@ -291,6 +291,7 @@ pub struct LogConfig {
     pub lookback: Option<String>,
     pub use_k8s_enrichment: Option<String>,
     pub log_k8s_events: Option<String>,
+    pub log_reporter_metrics: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Default)]
@@ -419,6 +420,7 @@ impl Default for LogConfig {
             lookback: None,
             use_k8s_enrichment: None,
             log_k8s_events: None,
+            log_reporter_metrics: None
         }
     }
 }
@@ -442,6 +444,8 @@ impl Merge for LogConfig {
             .merge(&other.use_k8s_enrichment, &default.use_k8s_enrichment);
         self.log_k8s_events
             .merge(&other.log_k8s_events, &default.log_k8s_events);
+        self.log_reporter_metrics
+            .merge(&&other.log_reporter_metrics, &&default.log_reporter_metrics);
     }
 }
 

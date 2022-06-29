@@ -121,6 +121,13 @@ pub struct ArgumentOptions {
     #[structopt(long, env = env_vars::LOG_K8S_EVENTS)]
     log_k8s_events: Option<K8sTrackingConf>,
 
+    /// Determines whether the agent should metrics-servers data.
+    /// When set this agent will poll the metrics-server on the cluster to get usage statistics
+    /// combine them with other pod/node statistics for enhancements to the web application. 
+    /// Defaults to "off".
+    #[structopt(long, env = env_vars::LOG_REPORTER_METRICS)]
+    log_reporter_metrics: Option<K8sTrackingConf>,
+
     /// Determine wheather or not to look for available K8s startup leases before attempting
     /// to start the agent; used to throttle startup on very large K8s clusters.
     /// Defaults to "off".

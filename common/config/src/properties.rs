@@ -43,6 +43,7 @@ from_env_name!(DB_PATH);
 from_env_name!(METRICS_PORT);
 from_env_name!(USE_K8S_LOG_ENRICHMENT);
 from_env_name!(LOG_K8S_EVENTS);
+from_env_name!(LOG_REPORTER_METRICS);
 from_env_name!(K8S_STARTUP_LEASE);
 from_env_name!(LINE_EXCLUSION);
 from_env_name!(LINE_INCLUSION);
