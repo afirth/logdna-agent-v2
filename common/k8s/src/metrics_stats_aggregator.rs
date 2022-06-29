@@ -213,7 +213,6 @@ fn print_pods(
             r#"{{"kube":{}}}"#,
             serde_json::to_string(&translated_pod_container).unwrap_or(String::from(""))
         );
-        println!("{}", display_str);
         pod_strings.push(display_str)
     }
     pod_strings
@@ -226,7 +225,6 @@ fn print_nodes(nodes: &Vec<NodeStats>) -> Vec<String> {
             r#"{{"kube":{}}}"#,
             serde_json::to_string(&node).unwrap_or(String::from(""))
         );
-        println!("{}", node_str);
         node_strings.push(node_str);
     }
     node_strings
@@ -237,7 +235,6 @@ fn print_cluster_stats(cluster_stats: &ClusterStats) -> String {
         r#"{{"kube":{}}}"#,
         serde_json::to_string(&cluster_stats).unwrap_or(String::from(""))
     );
-    println!("{}", cluster_string);
     cluster_string
 }
 
