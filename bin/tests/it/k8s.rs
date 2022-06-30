@@ -1,5 +1,3 @@
-use k8s::kube_stats::cluster_stats::ClusterStats;
-use k8s_openapi::apimachinery::pkg::version::Info;
 use pnet::datalink;
 use std::net::{SocketAddr, ToSocketAddrs};
 
@@ -1344,18 +1342,6 @@ async fn test_k8s_startup_leases_off_start() {
     });
 
     server_result.unwrap();
-}
-
-#[derive(serde::Deserialize)]
-struct ReporterLineMeta {
-    #[serde(rename = "type")]
-    tag: String,
-}
-#[derive(serde::Deserialize)]
-struct ReporterLine {
-    kube: ReporterLineMeta,
-    // TODO: force a specific event and test for it's contents
-    // message: String
 }
 
 #[tokio::test]
