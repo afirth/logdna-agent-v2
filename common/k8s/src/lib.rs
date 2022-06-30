@@ -14,11 +14,11 @@ use hyper::http::header;
 
 pub mod errors;
 pub mod event_source;
+pub mod kube_stats;
 pub mod lease;
+pub mod metrics_stats_aggregator;
 pub mod middleware;
 pub mod restarting_stream;
-pub mod metrics_stats_aggregator;
-pub mod kube_stats;
 
 /// Manually create the k8s http client so that we can add a user-agent header
 fn create_k8s_client(
