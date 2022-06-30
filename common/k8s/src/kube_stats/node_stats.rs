@@ -673,7 +673,7 @@ mod tests {
         }
 
         if populate_conditions {
-            let mut conditions_vec = vec![NodeCondition {
+            let conditions_vec = vec![NodeCondition {
                 last_heartbeat_time: Some(Time(Utc::now())),
                 last_transition_time: Some(Time(Utc::now())),
                 message: Some("message".to_string()),

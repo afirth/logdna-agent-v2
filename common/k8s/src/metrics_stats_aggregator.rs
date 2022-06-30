@@ -341,7 +341,7 @@ fn process_pods(
                 false,
             );
 
-            if extended_pod_stat.is_some() {
+            if let Some(..) = extended_pod_stat {
                 extended_pod_stats.push(extended_pod_stat.unwrap());
             }
         }
@@ -375,7 +375,7 @@ fn process_pods(
                 true,
             );
 
-            if extended_pod_stat.is_some() {
+            if let Some(..) = extended_pod_stat {
                 extended_pod_stats.push(extended_pod_stat.unwrap());
             }
         }
