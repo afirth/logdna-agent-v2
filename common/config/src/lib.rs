@@ -139,7 +139,7 @@ pub struct LogConfig {
     pub lookback: Lookback,
     pub use_k8s_enrichment: K8sTrackingConf,
     pub log_k8s_events: K8sTrackingConf,
-    pub log_reporter_metrics: K8sTrackingConf
+    pub log_metric_server_stats: K8sTrackingConf
 }
 
 #[derive(Debug)]
@@ -356,8 +356,8 @@ impl TryFrom<RawConfig> for Config {
                 env_vars::LOG_K8S_EVENTS,
                 K8sTrackingConf::Never,
             ),
-            log_reporter_metrics: parse_k8s_tracking_or_warn(
-                raw.log.log_reporter_metrics,
+            log_metric_server_stats: parse_k8s_tracking_or_warn(
+                raw.log.log_metric_server_stats,
                 env_vars::LOG_K8S_EVENTS,
                 K8sTrackingConf::Never
             )
