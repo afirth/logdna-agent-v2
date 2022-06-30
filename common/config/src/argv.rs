@@ -123,7 +123,7 @@ pub struct ArgumentOptions {
 
     /// Determines whether the agent should produce metrics-servers usage logs.
     /// When set this agent will poll the metrics-server on the cluster to get usage statistics
-    /// combine them with other pod/node statistics for enhancements to the web application. 
+    /// combine them with other pod/node statistics for enhancements to the web application.
     /// Defaults to "off".
     #[structopt(long, env = env_vars::LOG_METRIC_SERVER_STATS)]
     log_metric_server_stats: Option<K8sTrackingConf>,
@@ -306,11 +306,9 @@ impl ArgumentOptions {
             raw.log.log_k8s_events = self.log_k8s_events.map(|v| v.to_string());
         }
 
-
         if self.log_metric_server_stats.is_some() {
             raw.log.log_metric_server_stats = self.log_metric_server_stats.map(|v| v.to_string());
         }
-
 
         if self.k8s_startup_lease.is_some() {
             raw.startup.option = self.k8s_startup_lease;

@@ -1420,18 +1420,14 @@ async fn test_metric_stats_aggregator() {
         let mut found_cluster_log = false;
         for (key, value) in map.iter() {
             if !key.contains(agent_name) {
-                continue;  
+                continue;
             }
             for entry in &value.values {
                 if entry.contains("{\"resource\":\"cluster\"") {
                     found_cluster_log = true;
-                }
-
-                else if entry.contains("{\"resource\":\"node\"") {
+                } else if entry.contains("{\"resource\":\"node\"") {
                     found_node_log = true;
-                }
-
-                else if entry.contains("{\"resource\":\"container\"") {
+                } else if entry.contains("{\"resource\":\"container\"") {
                     found_pod_log = true;
                 }
             }

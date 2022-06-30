@@ -420,7 +420,7 @@ impl Default for LogConfig {
             lookback: None,
             use_k8s_enrichment: None,
             log_k8s_events: None,
-            log_metric_server_stats: None
+            log_metric_server_stats: None,
         }
     }
 }
@@ -444,8 +444,10 @@ impl Merge for LogConfig {
             .merge(&other.use_k8s_enrichment, &default.use_k8s_enrichment);
         self.log_k8s_events
             .merge(&other.log_k8s_events, &default.log_k8s_events);
-        self.log_metric_server_stats
-            .merge(&other.log_metric_server_stats, &default.log_metric_server_stats);
+        self.log_metric_server_stats.merge(
+            &other.log_metric_server_stats,
+            &default.log_metric_server_stats,
+        );
     }
 }
 
