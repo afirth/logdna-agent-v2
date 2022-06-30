@@ -32,7 +32,7 @@ pub struct PodStats {
 }
 
 impl PodStats {
-    pub fn builder<'a>(p: &'a Pod) -> PodStatsBuilder<'a> {
+    pub fn builder(p: &Pod) -> PodStatsBuilder {
         PodStatsBuilder { p }
     }
 }
@@ -42,7 +42,7 @@ pub struct PodStatsBuilder<'a> {
 }
 
 impl PodStatsBuilder<'_> {
-    pub fn new<'a>(p: &Pod) -> PodStatsBuilder {
+    pub fn new(p: &Pod) -> PodStatsBuilder {
         PodStatsBuilder { p }
     }
 
@@ -72,7 +72,12 @@ impl PodStatsBuilder<'_> {
             .clone()
             .unwrap_or_else(|| "".to_string());
 
-        let pod = self.p.metadata.name.clone().unwrap_or("".to_string());
+        let pod = self
+            .p
+            .metadata
+            .name
+            .clone()
+            .unwrap_or_else(|| "".to_string());
 
         match spec {
             Some(spec) => {
@@ -146,7 +151,7 @@ fn get_controller_details(owners: &Option<Vec<OwnerReference>>) -> (String, Stri
         }
     }
 
-    return ("".to_string(), "".to_string());
+    ("".to_string(), "".to_string())
 }
 
 #[cfg(test)]
@@ -203,7 +208,7 @@ mod tests {
         let meta = ObjectMeta {
             annotations: None,
             cluster_name: None,
-            creation_timestamp: Some(Time { 0: Utc::now() }),
+            creation_timestamp: Some(Time(Utc::now())),
             deletion_grace_period_seconds: None,
             deletion_timestamp: None,
             finalizers: None,
@@ -281,7 +286,7 @@ mod tests {
             pod_ips: None,
             qos_class: Some("class".to_string()),
             reason: None,
-            start_time: Some(Time { 0: Utc::now() }),
+            start_time: Some(Time(Utc::now())),
         }
     }
 }

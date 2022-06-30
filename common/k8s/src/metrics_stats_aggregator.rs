@@ -294,13 +294,13 @@ fn process_pods(
         for status in status
             .container_statuses
             .as_ref()
-            .unwrap_or_else(|| &default_status_vec)
-            .into_iter()
+            .unwrap_or(&default_status_vec)
+            .iter()
             .chain(
                 status
                     .init_container_statuses
                     .as_ref()
-                    .unwrap_or_else(|| &default_status_vec)
+                    .unwrap_or(&default_status_vec)
                     .iter(),
             )
         {

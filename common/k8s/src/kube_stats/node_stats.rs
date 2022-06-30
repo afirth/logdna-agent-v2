@@ -169,7 +169,7 @@ impl NodeStatsBuilder<'_> {
         match spec {
             Some(spec) => {
                 if spec.unschedulable.is_some() {
-                    unschedulable = Some(spec.unschedulable.as_ref().unwrap().clone());
+                    unschedulable = Some(*spec.unschedulable.as_ref().unwrap());
                 }
             }
             None => {}
@@ -205,7 +205,6 @@ impl NodeStatsBuilder<'_> {
                     });
 
                     memory_allocatable = memory_quantity
-                        .as_deref()
                         .map(|memory| Some(convert_memory_usage_to_bytes(memory.0.as_str())))
                         .unwrap_or(None);
 
@@ -228,7 +227,6 @@ impl NodeStatsBuilder<'_> {
                     });
 
                     memory_capacity = memory_quantity
-                        .as_deref()
                         .map(|memory| Some(convert_memory_usage_to_bytes(memory.0.as_str())))
                         .unwrap_or(None);
 
@@ -355,6 +353,12 @@ pub struct NodeContainerStats {
     pub containers_init: i32,
 }
 
+impl Default for NodeContainerStats {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl NodeContainerStats {
     pub fn new() -> Self {
         NodeContainerStats {
@@ -402,6 +406,12 @@ pub struct NodePodStats {
     pub pods_succeeded: i32,
     pub pods_unknown: i32,
     pub pods_total: i32,
+}
+
+impl Default for NodePodStats {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl NodePodStats {
@@ -602,7 +612,7 @@ mod tests {
         let meta = ObjectMeta {
             annotations: None,
             cluster_name: None,
-            creation_timestamp: Some(Time { 0: Utc::now() }),
+            creation_timestamp: Some(Time(Utc::now())),
             deletion_grace_period_seconds: None,
             deletion_timestamp: None,
             finalizers: None,
@@ -649,7 +659,7 @@ mod tests {
         let mut node_info = None;
 
         if populate_addresses {
-            let mut address_vec = Vec::<NodeAddress>::new();
+            let mut address_vec = vec![];
             address_vec.push(NodeAddress {
                 address: "a1".to_string(),
                 type_: "externalip".to_string(),
@@ -663,10 +673,10 @@ mod tests {
         }
 
         if populate_conditions {
-            let mut conditions_vec = Vec::<NodeCondition>::new();
+            let mut conditions_vec = vec![];
             conditions_vec.push(NodeCondition {
-                last_heartbeat_time: Some(Time { 0: Utc::now() }),
-                last_transition_time: Some(Time { 0: Utc::now() }),
+                last_heartbeat_time: Some(Time(Utc::now())),
+                last_transition_time: Some(Time(Utc::now())),
                 message: Some("message".to_string()),
                 reason: Some("reason".to_string()),
                 status: "true".to_string(),
@@ -710,21 +720,15 @@ mod tests {
         let mut allocatable: BTreeMap<String, Quantity> = BTreeMap::new();
         allocatable.insert(
             "cpu".to_string(),
-            Quantity {
-                0: "123".to_string(),
-            },
+            Quantity("123".to_string()),
         );
         allocatable.insert(
             "memory".to_string(),
-            Quantity {
-                0: "123".to_string(),
-            },
+            Quantity("123".to_string()),
         );
         allocatable.insert(
             "pods".to_string(),
-            Quantity {
-                0: "123".to_string(),
-            },
+            Quantity("123".to_string()),
         );
 
         allocatable
@@ -734,21 +738,15 @@ mod tests {
         let mut allocatable: BTreeMap<String, Quantity> = BTreeMap::new();
         allocatable.insert(
             "cpu".to_string(),
-            Quantity {
-                0: "ab".to_string(),
-            },
+            Quantity("ab".to_string()),
         );
         allocatable.insert(
             "memory".to_string(),
-            Quantity {
-                0: "ab".to_string(),
-            },
+            Quantity("ab".to_string()),
         );
         allocatable.insert(
             "pods".to_string(),
-            Quantity {
-                0: "ab".to_string(),
-            },
+            Quantity("ab".to_string()),
         );
 
         allocatable
@@ -758,21 +756,15 @@ mod tests {
         let mut capacity: BTreeMap<String, Quantity> = BTreeMap::new();
         capacity.insert(
             "cpu".to_string(),
-            Quantity {
-                0: "123".to_string(),
-            },
+            Quantity("123".to_string()),
         );
         capacity.insert(
             "memory".to_string(),
-            Quantity {
-                0: "123".to_string(),
-            },
+            Quantity("123".to_string()),
         );
         capacity.insert(
             "pods".to_string(),
-            Quantity {
-                0: "123".to_string(),
-            },
+            Quantity("123".to_string()),
         );
 
         capacity
@@ -782,22 +774,16 @@ mod tests {
         let mut capacity: BTreeMap<String, Quantity> = BTreeMap::new();
         capacity.insert(
             "cpu".to_string(),
-            Quantity {
-                0: "ab".to_string(),
-            },
+            Quantity("ab".to_string()),
         );
         capacity.insert(
             "memory".to_string(),
-            Quantity {
-                0: "ab".to_string(),
-            },
+            Quantity("ab".to_string()),
         );
 
         capacity.insert(
             "pods".to_string(),
-            Quantity {
-                0: "ab".to_string(),
-            },
+            Quantity("ab".to_string()),
         );
 
         capacity

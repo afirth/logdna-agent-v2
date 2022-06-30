@@ -8,6 +8,13 @@ pub struct ControllerStats {
     pub controller_pods_total: i32,
 }
 
+impl Default for ControllerStats {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+
 impl ControllerStats {
     pub fn new() -> Self {
         Self {

@@ -30,6 +30,12 @@ pub struct ClusterStats {
     pub pods_total: i32,
 }
 
+impl Default for ClusterStats {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ClusterStats {
     pub fn new() -> ClusterStats {
         ClusterStats {

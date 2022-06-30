@@ -10,7 +10,7 @@ pub fn convert_cpu_usage_to_milli(cpu: &str) -> i32 {
         return 0;
     }
 
-    let parsed_value: f64 = value.parse().unwrap_or_else(|_| 0f64);
+    let parsed_value: f64 = value.parse().unwrap_or(0f64);
     let mut denominator = 1000000.0;
 
     if parsed_value < 1.0 || unit.is_empty() {
@@ -31,9 +31,8 @@ pub fn convert_cpu_usage_to_milli(cpu: &str) -> i32 {
         }
     }
 
-    let result = (parsed_value / denominator).ceil() as i32;
+    (parsed_value / denominator).ceil() as i32
 
-    result
 }
 pub fn convert_memory_usage_to_bytes(memory: &str) -> i64 {
     if memory.is_empty() {
@@ -49,7 +48,7 @@ pub fn convert_memory_usage_to_bytes(memory: &str) -> i64 {
         return 0;
     }
 
-    let parsed_value: i64 = value.parse().unwrap_or_else(|_| 0i64);
+    let parsed_value: i64 = value.parse().unwrap_or(0i64);
     let mut multiplier: i64 = 1024;
 
     match unit.as_str() {
@@ -78,7 +77,7 @@ pub fn convert_memory_usage_to_bytes(memory: &str) -> i64 {
         &_ => {}
     }
 
-    return parsed_value * multiplier;
+    parsed_value * multiplier
 }
 
 #[cfg(test)]

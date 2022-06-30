@@ -90,8 +90,8 @@ impl ContainerStatsBuilder<'_> {
     pub fn build(self) -> ContainerStats {
         let container = self.c.name.clone();
 
-        let memory_usage = convert_memory_usage_to_bytes(&self.raw_memory_usage);
-        let cpu_usage = convert_cpu_usage_to_milli(&self.raw_cpu_usage);
+        let memory_usage = convert_memory_usage_to_bytes(self.raw_memory_usage);
+        let cpu_usage = convert_cpu_usage_to_milli(self.raw_cpu_usage);
 
         let mut image = String::new();
         let mut image_tag = String::new();
@@ -115,9 +115,9 @@ impl ContainerStatsBuilder<'_> {
         if self.c.image.is_some() {
             let container_image = self.c.image.clone().unwrap();
 
-            let split = container_image.split_once(":");
+            let split = container_image.split_once(':');
 
-            if split.is_some() {
+            if let Some(..) = split {
                 image = split.unwrap().0.to_string();
                 image_tag = split.unwrap().1.to_string();
             }
@@ -126,12 +126,12 @@ impl ContainerStatsBuilder<'_> {
         let running = self.c_state.running.as_ref();
         let terminated = self.c_state.terminated.as_ref();
 
-        if running.is_some() {
+        if let Some(..) = running {
             state = "Running".to_string();
 
-            let started_at = running.unwrap().started_at.as_ref().and_then(|s| Some(s.0));
+            let started_at = running.unwrap().started_at.as_ref().map(|s| s.0);
 
-            if started_at.is_some() {
+            if let Some(..) = started_at {
                 container_age = Local::now()
                     .signed_duration_since(started_at.unwrap())
                     .num_milliseconds();
@@ -146,7 +146,7 @@ impl ContainerStatsBuilder<'_> {
 
         let last_status_state = self.c_status.last_state.as_ref();
 
-        if last_status_state.is_some() {
+        if let Some(..) = last_status_state {
             let last_running = last_status_state.unwrap().running.as_ref();
             let last_terminated = last_status_state.unwrap().terminated.as_ref();
             let last_waiting = last_status_state.unwrap().waiting.as_ref();
@@ -157,10 +157,8 @@ impl ContainerStatsBuilder<'_> {
 
             last_running.and_then(|l| {
                 last_state = "Running".to_string();
-                l.started_at.as_ref().and_then(|s| {
-                    Some({
-                        last_started = Some(s.0.timestamp_millis());
-                    })
+                l.started_at.as_ref().map(|s| {
+                    last_started = Some(s.0.timestamp_millis());
                 })
             });
 
@@ -168,13 +166,11 @@ impl ContainerStatsBuilder<'_> {
                 last_state = "Terminated".to_string();
                 l.started_at
                     .as_ref()
-                    .and_then(|s| Some(last_started = Some(s.0.timestamp_millis())));
+                    .map(|s| last_started = Some(s.0.timestamp_millis()));
                 l.finished_at
                     .as_ref()
-                    .and_then(|f| Some(last_finished = Some(f.0.timestamp_millis())));
-                l.reason
-                    .as_ref()
-                    .and_then(|r| Some(last_reason = r.to_string()))
+                    .map(|f| last_finished = Some(f.0.timestamp_millis()));
+                l.reason.as_ref().map(|r| last_reason = r.to_string())
             });
         }
 
@@ -187,37 +183,33 @@ impl ContainerStatsBuilder<'_> {
 
         let resources = self.c.resources.as_ref();
 
-        if resources.is_some() {
+        if let Some(..) = resources {
             let limits = resources.unwrap().limits.as_ref();
 
-            if limits.is_some() {
+            if let Some(..) = limits {
                 let cpu = limits.unwrap().get("cpu");
                 let memory = limits.unwrap().get("memory");
 
                 cpu_limit = cpu
-                    .as_deref()
                     .map(|cpu| Some(convert_cpu_usage_to_milli(cpu.0.as_str())))
                     .unwrap_or(None);
 
                 memory_limit = memory
-                    .as_deref()
                     .map(|memory| Some(convert_memory_usage_to_bytes(memory.0.as_str())))
                     .unwrap_or(None);
             }
 
             let requests = resources.unwrap().requests.as_ref();
 
-            if requests.is_some() {
+            if let Some(..) = requests {
                 let cpu = requests.unwrap().get("cpu");
                 let memory = requests.unwrap().get("memory");
 
                 cpu_request = cpu
-                    .as_deref()
                     .map(|cpu| Some(convert_cpu_usage_to_milli(cpu.0.as_str())))
                     .unwrap_or(None);
 
                 memory_request = memory
-                    .as_deref()
                     .map(|memory| Some(convert_memory_usage_to_bytes(memory.0.as_str())))
                     .unwrap_or(None);
             }
@@ -340,17 +332,17 @@ mod tests {
 
         if state.eq(&"running".to_string()) {
             running_state = Some(ContainerStateRunning {
-                started_at: Some(Time { 0: Utc::now() }),
+                started_at: Some(Time(Utc::now())),
             })
         } else if state.eq(&"terminated".to_string()) {
             terminated_state = Some(ContainerStateTerminated {
                 container_id: None,
                 exit_code: 0,
-                finished_at: Some(Time { 0: Utc::now() }),
+                finished_at: Some(Time(Utc::now())),
                 message: Some("message".to_string()),
                 reason: Some("reason".to_string()),
                 signal: None,
-                started_at: Some(Time { 0: Utc::now() }),
+                started_at: Some(Time(Utc::now())),
             })
         } else if state.eq(&"waiting".to_string()) {
             waiting_state = Some(ContainerStateWaiting {
@@ -411,66 +403,49 @@ mod tests {
         let mut b_tree_limits: BTreeMap<String, Quantity> = BTreeMap::new();
         b_tree_limits.insert(
             "cpu".to_string(),
-            Quantity {
-                0: "123".to_string(),
-            },
+            Quantity ("123".to_string()),
         );
         b_tree_limits.insert(
             "memory".to_string(),
-            Quantity {
-                0: "123".to_string(),
-            },
+            Quantity ("123".to_string()),
         );
 
         let mut b_tree_requests = BTreeMap::new();
         b_tree_requests.insert(
             "cpu".to_string(),
-            Quantity {
-                0: "123".to_string(),
-            },
+            Quantity ("123".to_string()),
         );
+
         b_tree_requests.insert(
             "memory".to_string(),
-            Quantity {
-                0: "123".to_string(),
-            },
+            Quantity ("123".to_string()),
         );
 
-        let resource = ResourceRequirements {
+        ResourceRequirements {
             limits: Some(b_tree_limits),
             requests: Some(b_tree_requests),
-        };
-
-        resource
+        }
     }
 
     fn create_resource_bad() -> ResourceRequirements {
         let mut b_tree_limits: BTreeMap<String, Quantity> = BTreeMap::new();
         b_tree_limits.insert(
             "cpu".to_string(),
-            Quantity {
-                0: "not a limit".to_string(),
-            },
+            Quantity("not a limit".to_string()),
         );
         b_tree_limits.insert(
             "memory".to_string(),
-            Quantity {
-                0: "not a limit".to_string(),
-            },
+            Quantity("not a limit".to_string()),
         );
 
         let mut b_tree_requests = BTreeMap::new();
         b_tree_requests.insert(
             "cpu".to_string(),
-            Quantity {
-                0: "not a request".to_string(),
-            },
+            Quantity("not a limit".to_string()),
         );
         b_tree_requests.insert(
             "memory".to_string(),
-            Quantity {
-                0: "not a request".to_string(),
-            },
+            Quantity("not a limit".to_string()),
         );
 
         let resource = ResourceRequirements {
