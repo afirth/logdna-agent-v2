@@ -331,16 +331,19 @@ fn process_pods(
                 continue;
             }
 
-            populate_container(
+            let extended_pod_stat = build_extended_pod_stat_and_update_container_counts(
                 &pod_usage_map,
                 container,
                 container_status,
                 node_container_counts_map,
                 &node,
-                extended_pod_stats,
                 &translated_pod,
                 false,
             );
+
+            if extended_pod_stat.is_some() {
+                extended_pod_stats.push(extended_pod_stat.unwrap());
+            }
         }
 
         let default_container_vec: Vec<Container> = Vec::new();
@@ -362,30 +365,32 @@ fn process_pods(
                 continue;
             }
 
-            populate_container(
+            let extended_pod_stat = build_extended_pod_stat_and_update_container_counts(
                 &pod_usage_map,
                 init_container,
                 container_status,
                 node_container_counts_map,
                 &node,
-                extended_pod_stats,
                 &translated_pod,
                 true,
             );
+
+            if extended_pod_stat.is_some() {
+                extended_pod_stats.push(extended_pod_stat.unwrap());
+            }
         }
     }
 }
 
-fn populate_container(
+fn build_extended_pod_stat_and_update_container_counts(
     pod_usage_map: &HashMap<String, Value>,
     container: &Container,
     container_status: Option<&ContainerStatus>,
     node_container_counts_map: &mut HashMap<String, NodeContainerStats>,
     node: &str,
-    extended_pod_stats: &mut Vec<ExtendedPodStats>,
     translated_pod: &PodStats,
     init: bool,
-) {
+) -> Option<ExtendedPodStats> {
     let usage = pod_usage_map.get(&container.name);
     if let Some(..) = usage {
         let translated_container = ContainerStats::builder(
@@ -407,11 +412,13 @@ fn populate_container(
             init,
         );
 
-        extended_pod_stats.push(ExtendedPodStats::new(
+        ExtendedPodStats::new(
             translated_pod.clone(),
             translated_container,
-        ));
+        );
     }
+
+    None
 }
 
 fn process_nodes(
