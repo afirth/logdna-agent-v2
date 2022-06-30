@@ -412,10 +412,7 @@ fn build_extended_pod_stat_and_update_container_counts(
             init,
         );
 
-        ExtendedPodStats::new(
-            translated_pod.clone(),
-            translated_container,
-        );
+        ExtendedPodStats::new(translated_pod.clone(), translated_container);
     }
 
     None

@@ -14,7 +14,6 @@ impl Default for ControllerStats {
     }
 }
 
-
 impl ControllerStats {
     pub fn new() -> Self {
         Self {

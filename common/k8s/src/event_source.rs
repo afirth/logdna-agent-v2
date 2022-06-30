@@ -15,7 +15,7 @@ use k8s_openapi::api::core::v1::{Event, ObjectReference, Pod};
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::Time;
 use kube::api::ListParams;
 use kube::{
-    runtime::{WatchStreamExt, watcher},
+    runtime::{watcher, WatchStreamExt},
     Api, Client, Config,
 };
 

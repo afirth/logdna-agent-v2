@@ -32,7 +32,6 @@ pub fn convert_cpu_usage_to_milli(cpu: &str) -> i32 {
     }
 
     (parsed_value / denominator).ceil() as i32
-
 }
 pub fn convert_memory_usage_to_bytes(memory: &str) -> i64 {
     if memory.is_empty() {
