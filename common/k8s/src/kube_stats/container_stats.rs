@@ -164,12 +164,12 @@ impl ContainerStatsBuilder<'_> {
 
             last_terminated.and_then(|l| {
                 last_state = "Terminated".to_string();
-                l.started_at
-                    .as_ref()
-                    .map(|s| last_started = Some(s.0.timestamp_millis()));
-                l.finished_at
-                    .as_ref()
-                    .map(|f| last_finished = Some(f.0.timestamp_millis()));
+                if let Some(s) = l.started_at.as_ref() {
+                    Some(s.0.timestamp_millis());
+                }
+                if let Some(f) = l.finished_at.as_ref() {
+                    Some(f.0.timestamp_millis());
+                }
                 l.reason.as_ref().map(|r| last_reason = r.to_string())
             });
         }
@@ -401,25 +401,13 @@ mod tests {
 
     fn create_resource_default() -> ResourceRequirements {
         let mut b_tree_limits: BTreeMap<String, Quantity> = BTreeMap::new();
-        b_tree_limits.insert(
-            "cpu".to_string(),
-            Quantity ("123".to_string()),
-        );
-        b_tree_limits.insert(
-            "memory".to_string(),
-            Quantity ("123".to_string()),
-        );
+        b_tree_limits.insert("cpu".to_string(), Quantity("123".to_string()));
+        b_tree_limits.insert("memory".to_string(), Quantity("123".to_string()));
 
         let mut b_tree_requests = BTreeMap::new();
-        b_tree_requests.insert(
-            "cpu".to_string(),
-            Quantity ("123".to_string()),
-        );
+        b_tree_requests.insert("cpu".to_string(), Quantity("123".to_string()));
 
-        b_tree_requests.insert(
-            "memory".to_string(),
-            Quantity ("123".to_string()),
-        );
+        b_tree_requests.insert("memory".to_string(), Quantity("123".to_string()));
 
         ResourceRequirements {
             limits: Some(b_tree_limits),
@@ -429,30 +417,16 @@ mod tests {
 
     fn create_resource_bad() -> ResourceRequirements {
         let mut b_tree_limits: BTreeMap<String, Quantity> = BTreeMap::new();
-        b_tree_limits.insert(
-            "cpu".to_string(),
-            Quantity("not a limit".to_string()),
-        );
-        b_tree_limits.insert(
-            "memory".to_string(),
-            Quantity("not a limit".to_string()),
-        );
+        b_tree_limits.insert("cpu".to_string(), Quantity("not a limit".to_string()));
+        b_tree_limits.insert("memory".to_string(), Quantity("not a limit".to_string()));
 
         let mut b_tree_requests = BTreeMap::new();
-        b_tree_requests.insert(
-            "cpu".to_string(),
-            Quantity("not a limit".to_string()),
-        );
-        b_tree_requests.insert(
-            "memory".to_string(),
-            Quantity("not a limit".to_string()),
-        );
+        b_tree_requests.insert("cpu".to_string(), Quantity("not a limit".to_string()));
+        b_tree_requests.insert("memory".to_string(), Quantity("not a limit".to_string()));
 
-        let resource = ResourceRequirements {
+        ResourceRequirements {
             limits: Some(b_tree_limits),
             requests: Some(b_tree_requests),
-        };
-
-        resource
+        }
     }
 }

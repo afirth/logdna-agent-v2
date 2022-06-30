@@ -659,29 +659,28 @@ mod tests {
         let mut node_info = None;
 
         if populate_addresses {
-            let mut address_vec = vec![];
-            address_vec.push(NodeAddress {
-                address: "a1".to_string(),
-                type_: "externalip".to_string(),
-            });
-            address_vec.push(NodeAddress {
-                address: "a2".to_string(),
-                type_: "internalip".to_string(),
-            });
-
+            let address_vec = vec![
+                NodeAddress {
+                    address: "a1".to_string(),
+                    type_: "externalip".to_string(),
+                },
+                NodeAddress {
+                    address: "a2".to_string(),
+                    type_: "internalip".to_string(),
+                },
+            ];
             address = Some(address_vec);
         }
 
         if populate_conditions {
-            let mut conditions_vec = vec![];
-            conditions_vec.push(NodeCondition {
+            let mut conditions_vec = vec![NodeCondition {
                 last_heartbeat_time: Some(Time(Utc::now())),
                 last_transition_time: Some(Time(Utc::now())),
                 message: Some("message".to_string()),
                 reason: Some("reason".to_string()),
                 status: "true".to_string(),
                 type_: "ready".to_string(),
-            });
+            }];
 
             conditions = Some(conditions_vec)
         }
@@ -718,73 +717,37 @@ mod tests {
 
     fn create_allocatable_default() -> BTreeMap<String, Quantity> {
         let mut allocatable: BTreeMap<String, Quantity> = BTreeMap::new();
-        allocatable.insert(
-            "cpu".to_string(),
-            Quantity("123".to_string()),
-        );
-        allocatable.insert(
-            "memory".to_string(),
-            Quantity("123".to_string()),
-        );
-        allocatable.insert(
-            "pods".to_string(),
-            Quantity("123".to_string()),
-        );
+        allocatable.insert("cpu".to_string(), Quantity("123".to_string()));
+        allocatable.insert("memory".to_string(), Quantity("123".to_string()));
+        allocatable.insert("pods".to_string(), Quantity("123".to_string()));
 
         allocatable
     }
 
     fn create_allocatable_bad() -> BTreeMap<String, Quantity> {
         let mut allocatable: BTreeMap<String, Quantity> = BTreeMap::new();
-        allocatable.insert(
-            "cpu".to_string(),
-            Quantity("ab".to_string()),
-        );
-        allocatable.insert(
-            "memory".to_string(),
-            Quantity("ab".to_string()),
-        );
-        allocatable.insert(
-            "pods".to_string(),
-            Quantity("ab".to_string()),
-        );
+        allocatable.insert("cpu".to_string(), Quantity("ab".to_string()));
+        allocatable.insert("memory".to_string(), Quantity("ab".to_string()));
+        allocatable.insert("pods".to_string(), Quantity("ab".to_string()));
 
         allocatable
     }
 
     fn create_capacity_default() -> BTreeMap<String, Quantity> {
         let mut capacity: BTreeMap<String, Quantity> = BTreeMap::new();
-        capacity.insert(
-            "cpu".to_string(),
-            Quantity("123".to_string()),
-        );
-        capacity.insert(
-            "memory".to_string(),
-            Quantity("123".to_string()),
-        );
-        capacity.insert(
-            "pods".to_string(),
-            Quantity("123".to_string()),
-        );
+        capacity.insert("cpu".to_string(), Quantity("123".to_string()));
+        capacity.insert("memory".to_string(), Quantity("123".to_string()));
+        capacity.insert("pods".to_string(), Quantity("123".to_string()));
 
         capacity
     }
 
     fn create_capacity_bad() -> BTreeMap<String, Quantity> {
         let mut capacity: BTreeMap<String, Quantity> = BTreeMap::new();
-        capacity.insert(
-            "cpu".to_string(),
-            Quantity("ab".to_string()),
-        );
-        capacity.insert(
-            "memory".to_string(),
-            Quantity("ab".to_string()),
-        );
+        capacity.insert("cpu".to_string(), Quantity("ab".to_string()));
+        capacity.insert("memory".to_string(), Quantity("ab".to_string()));
 
-        capacity.insert(
-            "pods".to_string(),
-            Quantity("ab".to_string()),
-        );
+        capacity.insert("pods".to_string(), Quantity("ab".to_string()));
 
         capacity
     }
