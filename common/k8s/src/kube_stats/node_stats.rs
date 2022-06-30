@@ -560,7 +560,6 @@ mod tests {
         assert_eq!(result.os_image, "".to_string());
     }
 
-
     #[tokio::test]
     async fn test_bad_capacity() {
         let allocatable = create_allocatable_default();
@@ -621,8 +620,8 @@ mod tests {
 
         Node {
             metadata: meta,
-            spec: spec,
-            status: status,
+            spec,
+            status,
         }
     }
 
@@ -694,13 +693,13 @@ mod tests {
 
         Some(NodeStatus {
             addresses: address,
-            allocatable: allocatable,
-            capacity: capacity,
-            conditions: conditions,
+            allocatable,
+            capacity,
+            conditions,
             config: None,
             daemon_endpoints: None,
             images: None,
-            node_info: node_info,
+            node_info,
             phase: Some("phase".to_string()),
             volumes_attached: None,
             volumes_in_use: None,

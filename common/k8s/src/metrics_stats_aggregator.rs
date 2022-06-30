@@ -34,7 +34,7 @@ impl MetricsStatsAggregator {
     }
 
     pub fn start_metrics_call_task(self) -> impl Stream<Item = LineBuilder> {
-        stream::unfold(self.client.clone(), |client| async {
+        stream::unfold(self.client, |client| async {
             sleep(Duration::from_millis(30000)).await;
             Some((
                 match self::process_reporter_info(client.clone()).await {
@@ -69,8 +69,8 @@ async fn process_reporter_info(
 ) -> anyhow::Result<(Vec<String>, Vec<String>, String)> {
     let pods = self::get_all_pods(client.clone()).await?;
     let nodes = self::get_all_nodes(client.clone()).await?;
-    let pod_metrics = self::call_metric_api(&"PodMetrics", client.clone()).await?;
-    let node_metrics = self::call_metric_api(&"NodeMetrics", client.clone()).await?;
+    let pod_metrics = self::call_metric_api("PodMetrics", client.clone()).await?;
+    let node_metrics = self::call_metric_api("NodeMetrics", client.clone()).await?;
 
     let mut controller_map: HashMap<String, ControllerStats> = HashMap::new();
     let mut node_pod_counts_map: HashMap<String, NodePodStats> = HashMap::new();
@@ -115,7 +115,7 @@ fn build_pod_metric_map(
     for pod_metric in pod_metrics {
         let containers = pod_metric.data["containers"].as_array();
 
-        if containers.is_some() {
+        if let Some(..) = containers {
             for container in containers.unwrap() {
                 let container_name = container["name"].as_str();
 
@@ -202,7 +202,7 @@ fn print_pods(
 
         let controller_stats = controller_map.get(&controller_key);
 
-        if controller_stats.is_some() {
+        if let Some(..) = controller_stats {
             translated_pod_container
                 .controller_stats
                 .copy_stats(controller_stats.unwrap());
@@ -210,7 +210,7 @@ fn print_pods(
 
         let display_str = format!(
             r#"{{"kube":{}}}"#,
-            serde_json::to_string(&translated_pod_container).unwrap_or(String::from(""))
+            serde_json::to_string(&translated_pod_container).unwrap_or_else(|_| String::from(""))
         );
         pod_strings.push(display_str)
     }
@@ -222,7 +222,7 @@ fn print_nodes(nodes: &Vec<NodeStats>) -> Vec<String> {
     for node in nodes {
         let node_str = format!(
             r#"{{"kube":{}}}"#,
-            serde_json::to_string(&node).unwrap_or(String::from(""))
+            serde_json::to_string(&node).unwrap_or_else(|_| String::from(""))
         );
         node_strings.push(node_str);
     }
@@ -232,7 +232,7 @@ fn print_nodes(nodes: &Vec<NodeStats>) -> Vec<String> {
 fn print_cluster_stats(cluster_stats: &ClusterStats) -> String {
     let cluster_string = format!(
         r#"{{"kube":{}}}"#,
-        serde_json::to_string(&cluster_stats).unwrap_or(String::from(""))
+        serde_json::to_string(&cluster_stats).unwrap_or_else(|_| String::from(""))
     );
     cluster_string
 }
@@ -264,7 +264,7 @@ fn process_pods(
 
         let node_pod_stat = node_pod_counts_map
             .entry(node.clone())
-            .or_insert(NodePodStats::new());
+            .or_insert_with(NodePodStats::new);
         node_pod_stat.inc(&phase);
 
         let controller_key = format!(
@@ -276,7 +276,7 @@ fn process_pods(
 
         let controller = controller_map
             .entry(controller_key.clone())
-            .or_insert(ControllerStats::new());
+            .or_insert_with(ControllerStats::new);
 
         let conditions = status.conditions.as_ref().unwrap();
         if conditions
@@ -294,21 +294,21 @@ fn process_pods(
         for status in status
             .container_statuses
             .as_ref()
-            .unwrap_or_else(|| &&default_status_vec)
+            .unwrap_or_else(|| &default_status_vec)
             .into_iter()
             .chain(
                 status
                     .init_container_statuses
                     .as_ref()
                     .unwrap_or_else(|| &default_status_vec)
-                    .into_iter(),
+                    .iter(),
             )
         {
             container_status_map.insert(status.name.clone(), status.clone());
 
             let controller = controller_map
                 .entry(controller_key.clone())
-                .or_insert(ControllerStats::new());
+                .or_insert_with(ControllerStats::new);
 
             controller.inc_containers_total();
 
@@ -333,7 +333,7 @@ fn process_pods(
 
             populate_container(
                 &pod_usage_map,
-                &container,
+                container,
                 container_status,
                 node_container_counts_map,
                 &node,
@@ -347,7 +347,7 @@ fn process_pods(
         for init_container in spec
             .init_containers
             .as_ref()
-            .unwrap_or_else(|| &default_container_vec)
+            .unwrap_or(&default_container_vec)
         {
             if init_container.name.is_empty()
                 || init_container.image.is_none()
@@ -364,7 +364,7 @@ fn process_pods(
 
             populate_container(
                 &pod_usage_map,
-                &init_container,
+                init_container,
                 container_status,
                 node_container_counts_map,
                 &node,
@@ -381,15 +381,15 @@ fn populate_container(
     container: &Container,
     container_status: Option<&ContainerStatus>,
     node_container_counts_map: &mut HashMap<String, NodeContainerStats>,
-    node: &String,
+    node: &str,
     extended_pod_stats: &mut Vec<ExtendedPodStats>,
     translated_pod: &PodStats,
     init: bool,
 ) {
     let usage = pod_usage_map.get(&container.name);
-    if usage.is_some() {
+    if let Some(..) = usage {
         let translated_container = ContainerStats::builder(
-            &container,
+            container,
             container_status.as_ref().unwrap(),
             container_status.unwrap().state.as_ref().unwrap(),
             usage.unwrap()["cpu"].as_str().unwrap_or(""),
@@ -398,8 +398,8 @@ fn populate_container(
         .build();
 
         let node_container_stat = node_container_counts_map
-            .entry(node.clone())
-            .or_insert(NodeContainerStats::new());
+            .entry(node.to_string())
+            .or_insert_with(NodeContainerStats::new);
 
         node_container_stat.inc(
             &translated_container.state,
@@ -433,17 +433,17 @@ fn process_nodes(
 
         let node_container_stats = node_container_counts_map
             .get(name)
-            .unwrap_or_else(|| &default_node_container_stats);
+            .unwrap_or(&default_node_container_stats);
         let node_pod_stats = node_pod_counts_map
             .get(name)
-            .unwrap_or_else(|| &default_pod_container_stats);
+            .unwrap_or(&default_pod_container_stats);
 
         let usage = node_usage_map.get(name);
-        if usage.is_some() {
+        if let Some(..) = usage {
             let translated_node = NodeStats::builder(
                 &node,
-                &node_pod_stats,
-                &node_container_stats,
+                node_pod_stats,
+                node_container_stats,
                 usage.unwrap()["cpu"].as_str().unwrap_or(""),
                 usage.unwrap()["memory"].as_str().unwrap_or(""),
             )
