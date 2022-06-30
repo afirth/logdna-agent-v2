@@ -1,25 +1,27 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-use super::{pod_stats::PodStats, container_stats::ContainerStats, controller_stats::ControllerStats};
+use super::{
+    container_stats::ContainerStats, controller_stats::ControllerStats, pod_stats::PodStats,
+};
 
 #[derive(Serialize, Deserialize)]
-pub struct ExtendedPodStats{
+pub struct ExtendedPodStats {
     #[serde(flatten)]
-    pub pod_stats: PodStats, 
+    pub pod_stats: PodStats,
 
     #[serde(flatten)]
     pub container_stats: ContainerStats,
 
     #[serde(flatten)]
-    pub controller_stats: ControllerStats
+    pub controller_stats: ControllerStats,
 }
 
 impl ExtendedPodStats {
     pub fn new(p_s: PodStats, c_s: ContainerStats) -> Self {
-        Self { 
-            pod_stats: p_s, 
-            container_stats: c_s, 
-            controller_stats: ControllerStats::new()
+        Self {
+            pod_stats: p_s,
+            container_stats: c_s,
+            controller_stats: ControllerStats::new(),
         }
     }
 }

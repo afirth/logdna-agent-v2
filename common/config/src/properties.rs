@@ -241,6 +241,7 @@ fn from_property_map(map: HashMap<String, String>) -> Result<Config, ConfigError
     result.log.lookback = map.get_string(&LOOKBACK);
     result.log.use_k8s_enrichment = map.get_string(&USE_K8S_LOG_ENRICHMENT);
     result.log.log_k8s_events = map.get_string(&LOG_K8S_EVENTS);
+    result.log.log_metric_server_stats = map.get_string(&LOG_METRIC_SERVER_STATS);
     result.log.db_path = map.get(&DB_PATH).map(PathBuf::from);
     result.startup.option = map.get_string(&K8S_STARTUP_LEASE);
 

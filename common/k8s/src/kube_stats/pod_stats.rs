@@ -152,14 +152,16 @@ fn get_controller_details(owners: &Option<Vec<OwnerReference>>) -> (String, Stri
 #[cfg(test)]
 mod tests {
     use chrono::Utc;
-    use k8s_openapi::{api::core::v1::{Pod, PodSpec, PodStatus}, apimachinery::pkg::apis::meta::v1::Time};
+    use k8s_openapi::{
+        api::core::v1::{Pod, PodSpec, PodStatus},
+        apimachinery::pkg::apis::meta::v1::Time,
+    };
     use kube::api::ObjectMeta;
 
     use super::PodStatsBuilder;
 
     #[tokio::test]
     async fn test_create_pod() {
-    
         let spec = create_spec();
         let status = create_status();
         let pod = create_pod(Some(spec), Some(status));
@@ -177,7 +179,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_no_spec() {
-    
         let status = create_status();
         let pod = create_pod(None, Some(status));
 
@@ -189,7 +190,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_no_status() {
-    
         let spec = create_spec();
         let pod = create_pod(Some(spec), None);
 
@@ -200,13 +200,10 @@ mod tests {
     }
 
     fn create_pod(spec: Option<PodSpec>, status: Option<PodStatus>) -> Pod {
-
         let meta = ObjectMeta {
             annotations: None,
             cluster_name: None,
-            creation_timestamp: Some(Time {
-                0: Utc::now()
-            }),
+            creation_timestamp: Some(Time { 0: Utc::now() }),
             deletion_grace_period_seconds: None,
             deletion_timestamp: None,
             finalizers: None,
@@ -244,7 +241,7 @@ mod tests {
             host_network: None,
             host_pid: None,
             hostname: None,
-            image_pull_secrets:None,
+            image_pull_secrets: None,
             init_containers: None,
             node_name: Some("node_name".to_string()),
             node_selector: None,
@@ -271,7 +268,6 @@ mod tests {
     }
 
     fn create_status() -> PodStatus {
- 
         PodStatus {
             conditions: None,
             container_statuses: None,
@@ -285,9 +281,7 @@ mod tests {
             pod_ips: None,
             qos_class: Some("class".to_string()),
             reason: None,
-            start_time: Some(Time {
-                0: Utc::now()
-            }),
+            start_time: Some(Time { 0: Utc::now() }),
         }
     }
 }

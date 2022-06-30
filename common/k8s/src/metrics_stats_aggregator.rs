@@ -59,9 +59,8 @@ impl MetricsStatsAggregator {
                 client,
             ))
         })
-            .filter_map(|x| async {
-                x
-            }).flatten()
+        .filter_map(|x| async { x })
+        .flatten()
     }
 }
 
@@ -540,14 +539,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_process_pods_does_not_panic() {
+        let pods = ObjectList::<Pod> {
+            metadata: ListMeta {
+                continue_: None,
+                remaining_item_count: None,
+                resource_version: None,
+                self_link: None,
+            },
+            items: Vec::new(),
+        };
 
-        let pods = ObjectList::<Pod> { metadata: ListMeta{ 
-            continue_: None, 
-            remaining_item_count: None, 
-            resource_version: None, 
-            self_link: None }, 
-            items: Vec::new() };
-        
         let mut controller_map: HashMap<String, ControllerStats> = HashMap::new();
         let mut node_pod_counts_map: HashMap<String, NodePodStats> = HashMap::new();
         let mut node_container_counts_map: HashMap<String, NodeContainerStats> = HashMap::new();
@@ -559,7 +560,7 @@ mod tests {
             pods,
             &mut controller_map,
             pod_usage_map,
-            &mut extended_pod_stats, 
+            &mut extended_pod_stats,
             &mut node_pod_counts_map,
             &mut node_container_counts_map,
         );
@@ -567,14 +568,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_process_nodes_does_not_panic() {
+        let nodes = ObjectList::<Node> {
+            metadata: ListMeta {
+                continue_: None,
+                remaining_item_count: None,
+                resource_version: None,
+                self_link: None,
+            },
+            items: Vec::new(),
+        };
 
-        let nodes = ObjectList::<Node> { metadata: ListMeta{ 
-            continue_: None, 
-            remaining_item_count: None, 
-            resource_version: None, 
-            self_link: None }, 
-            items: Vec::new() };
-        
         let mut node_pod_counts_map: HashMap<String, NodePodStats> = HashMap::new();
         let mut node_container_counts_map: HashMap<String, NodeContainerStats> = HashMap::new();
         let node_usage_map: HashMap<String, Value> = HashMap::new();

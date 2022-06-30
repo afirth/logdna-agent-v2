@@ -248,9 +248,13 @@ impl ContainerStatsBuilder<'_> {
 
 #[cfg(test)]
 mod tests {
-    use chrono::{Utc};
+    use chrono::Utc;
     use k8s_openapi::{
-        api::core::v1::{ResourceRequirements, ContainerStateRunning, ContainerStateTerminated, ContainerStateWaiting}, apimachinery::pkg::{api::resource::Quantity, apis::meta::v1::Time},
+        api::core::v1::{
+            ContainerStateRunning, ContainerStateTerminated, ContainerStateWaiting,
+            ResourceRequirements,
+        },
+        apimachinery::pkg::{api::resource::Quantity, apis::meta::v1::Time},
     };
     use std::collections::BTreeMap;
 
@@ -258,13 +262,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_running_container_stats() {
-
         let resource = create_resource_default();
         let state = create_state("running".to_string());
         let status = create_status(None);
         let container = create_container(resource);
-        let container_builder = 
-            ContainerStatsBuilder::new(&container, &status, &state, "1", "1");
+        let container_builder = ContainerStatsBuilder::new(&container, &status, &state, "1", "1");
 
         let result = container_builder.build();
 
@@ -283,14 +285,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_running_prev_waiting_container_stats() {
-
         let resource = create_resource_default();
         let state = create_state("running".to_string());
         let prev_state = create_state("waiting".to_string());
         let status = create_status(Some(prev_state));
         let container = create_container(resource);
-        let container_builder = 
-            ContainerStatsBuilder::new(&container, &status, &state, "1", "1");
+        let container_builder = ContainerStatsBuilder::new(&container, &status, &state, "1", "1");
 
         let result = container_builder.build();
 
@@ -301,14 +301,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_running_prev_terminated_container_stats() {
-
         let resource = create_resource_default();
         let state = create_state("running".to_string());
         let prev_state = create_state("terminated".to_string());
         let status = create_status(Some(prev_state));
         let container = create_container(resource);
-        let container_builder = 
-            ContainerStatsBuilder::new(&container, &status, &state, "1", "1");
+        let container_builder = ContainerStatsBuilder::new(&container, &status, &state, "1", "1");
 
         let result = container_builder.build();
 
@@ -320,14 +318,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_bad_limits_bad_requests_container_stats() {
-
         let resource = create_resource_bad();
         let state = create_state("running".to_string());
         let prev_state = create_state("terminated".to_string());
         let status = create_status(Some(prev_state));
         let container = create_container(resource);
-        let container_builder = 
-            ContainerStatsBuilder::new(&container, &status, &state, "1", "1");
+        let container_builder = ContainerStatsBuilder::new(&container, &status, &state, "1", "1");
 
         let result = container_builder.build();
 
@@ -338,34 +334,25 @@ mod tests {
     }
 
     fn create_state(state: String) -> ContainerState {
-
         let mut running_state = None;
         let mut terminated_state = None;
         let mut waiting_state = None;
 
         if state.eq(&"running".to_string()) {
             running_state = Some(ContainerStateRunning {
-                started_at: Some(Time {
-                    0: Utc::now()
-                }),
+                started_at: Some(Time { 0: Utc::now() }),
             })
-        }
-        else if state.eq(&"terminated".to_string()) {
+        } else if state.eq(&"terminated".to_string()) {
             terminated_state = Some(ContainerStateTerminated {
                 container_id: None,
                 exit_code: 0,
-                finished_at: Some(Time {
-                    0: Utc::now()
-                }),
+                finished_at: Some(Time { 0: Utc::now() }),
                 message: Some("message".to_string()),
                 reason: Some("reason".to_string()),
                 signal: None,
-                started_at: Some(Time {
-                    0: Utc::now()
-                }),
+                started_at: Some(Time { 0: Utc::now() }),
             })
-        }
-        else if state.eq(&"waiting".to_string()) {
+        } else if state.eq(&"waiting".to_string()) {
             waiting_state = Some(ContainerStateWaiting {
                 message: Some("reason".to_string()),
                 reason: None,
