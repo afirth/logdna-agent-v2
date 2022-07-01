@@ -728,6 +728,7 @@ db_path = /var/lib/my-dir
 metrics_port = 8901
 use_k8s_log_enrichment = never
 log_k8s_events = always
+log_metric_server_stats = always
 journald_paths = /first-j, /second-j/a
 inclusion_rules = /a/glob/include/**/*
 inclusion_regex_rules = /a/regex/include/.*
@@ -756,6 +757,7 @@ ingest_buffer_size = 3145728
         assert_eq!(config.log.metrics_port, Some(8901));
         assert_eq!(config.log.use_k8s_enrichment, some_string!("never"));
         assert_eq!(config.log.log_k8s_events, some_string!("always"));
+        assert_eq!(config.log.log_metric_server_stats, some_string!("always"));
         assert_eq!(
             config.journald.paths,
             Some(vec![

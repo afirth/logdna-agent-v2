@@ -607,6 +607,7 @@ mod test {
         assert_eq!(config.log.db_path, None);
         assert_eq!(config.log.metrics_port, None);
         assert_eq!(config.startup, K8sStartupLeaseConfig { option: None });
+        assert_eq!(config.log.log_metric_server_stats, None);
     }
 
     #[test]
@@ -627,6 +628,7 @@ mod test {
             lookback: Some(Lookback::Start),
             use_k8s_enrichment: Some(K8sTrackingConf::Always),
             log_k8s_events: Some(K8sTrackingConf::Never),
+            log_metric_server_stats: Some(K8sTrackingConf::Always),
             journald_paths: vec_strings!("/a"),
             k8s_startup_lease: Some(String::from("teston")),
             ingest_timeout: Some(1111111),
@@ -657,6 +659,7 @@ mod test {
         assert_eq!(config.log.lookback, some_string!("start"));
         assert_eq!(config.log.use_k8s_enrichment, some_string!("always"));
         assert_eq!(config.log.log_k8s_events, some_string!("never"));
+        assert_eq!(config.log.log_metric_server_stats, some_string!("always"));
         assert_eq!(config.log.db_path, Some(PathBuf::from("a/b/c")));
         assert_eq!(config.log.metrics_port, Some(9089));
         assert_eq!(config.journald.paths, Some(vec_paths!["/a"]));
