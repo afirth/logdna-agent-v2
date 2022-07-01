@@ -1357,7 +1357,7 @@ async fn test_k8s_startup_leases_off_start() {
 
 #[tokio::test]
 #[cfg_attr(not(feature = "k8s_tests"), ignore)]
-async fn test_metric_stats_aggregator() {
+async fn test_metric_stats_aggregator_enabled() {
     let _ = env_logger::Builder::from_default_env().try_init();
 
     let (server, received, shutdown_handle, ingester_addr) = common::start_http_ingester();
@@ -1434,6 +1434,90 @@ async fn test_metric_stats_aggregator() {
         assert!(found_node_log);
         assert!(found_pod_log);
 
+        shutdown_handle();
+    });
+
+    server_result.unwrap();
+}
+
+#[tokio::test]
+#[cfg_attr(not(feature = "k8s_tests"), ignore)]
+async fn test_metric_stats_aggregator_disabled() {
+    let _ = env_logger::Builder::from_default_env().try_init();
+
+    let (server, received, shutdown_handle, ingester_addr) = common::start_http_ingester();
+    tokio::time::sleep(tokio::time::Duration::from_millis(5000)).await;
+
+    let client = Client::try_default().await.unwrap();
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(5000)).await;
+
+    let (server_result, _) = tokio::join!(server, async {
+        tokio::time::sleep(tokio::time::Duration::from_millis(5000)).await;
+
+        let agent_name = "metric-aggregator-disabled";
+        let agent_namespace = "metric-aggregator-disabled";
+
+        // Create Agent
+        let nss: Api<Namespace> = Api::all(client.clone());
+        let ns = serde_json::from_value(serde_json::json!({
+            "apiVersion": "v1",
+            "kind": "Namespace",
+            "metadata": {
+                "name": agent_namespace
+            }
+        }))
+        .unwrap();
+        nss.create(&PostParams::default(), &ns).await.unwrap();
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        let mock_ingester_socket_addr_str = create_mock_ingester_service(
+            client.clone(),
+            ingester_public_addr(ingester_addr),
+            "ingest-service",
+            agent_namespace,
+            80,
+        )
+        .await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+        create_agent_ds(
+            client.clone(),
+            agent_name,
+            agent_namespace,
+            &mock_ingester_socket_addr_str,
+            "always",
+            "always",
+            "info",
+            "off",
+            "never",
+        )
+        .await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(45000)).await;
+
+        let map = received.lock().await;
+
+        let mut found_pod_log = false;
+        let mut found_node_log = false;
+        let mut found_cluster_log = false;
+        for (key, value) in map.iter() {
+            if !key.eq("logdna-reporter") {
+                continue;
+            }
+            for entry in &value.values {
+                if entry.contains("{\"resource\":\"cluster\"") {
+                    found_cluster_log = true;
+                } else if entry.contains("{\"resource\":\"node\"") {
+                    found_node_log = true;
+                } else if entry.contains("{\"resource\":\"container\"") {
+                    found_pod_log = true;
+                }
+            }
+        }
+        assert!(!found_cluster_log);
+        assert!(!found_node_log);
+        assert!(!found_pod_log);
         shutdown_handle();
     });
 

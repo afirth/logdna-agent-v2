@@ -267,7 +267,12 @@ mod tests {
         assert_eq!(result.memory_usage, 1);
         assert_eq!(result.cpu_usage, 1000);
         assert_eq!(result.state, "Running".to_string());
-
+        assert_eq!(result.cpu_limit.unwrap(), 123000);
+        assert_eq!(result.cpu_request.unwrap(), 123000);
+        assert_eq!(result.memory_limit.unwrap(), 123);
+        assert_eq!(result.memory_request.unwrap(), 123);
+        assert_eq!(result.restarts, 0);
+        assert_eq!(result.ready, true);
         assert_eq!(result.last_finished, None);
         assert_eq!(result.last_started, None);
         assert_eq!(result.last_reason, String::from(""));

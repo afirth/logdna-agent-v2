@@ -180,6 +180,8 @@ mod tests {
         assert_eq!(result.node, "node_name".to_string());
         assert_eq!(result.qos_class, "class".to_string());
         assert_eq!(result.namespace, "namespace".to_string());
+        assert_eq!(result.pod, "name".to_string());
+        assert_eq!(result.priority.unwrap(), 222);
     }
 
     #[tokio::test]
