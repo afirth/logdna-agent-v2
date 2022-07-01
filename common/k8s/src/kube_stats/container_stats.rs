@@ -272,7 +272,7 @@ mod tests {
         assert_eq!(result.memory_limit.unwrap(), 123);
         assert_eq!(result.memory_request.unwrap(), 123);
         assert_eq!(result.restarts, 0);
-        assert_eq!(result.ready, true);
+        assert!(result.ready);
         assert_eq!(result.last_finished, None);
         assert_eq!(result.last_started, None);
         assert_eq!(result.last_reason, String::from(""));
