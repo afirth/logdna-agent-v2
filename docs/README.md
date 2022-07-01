@@ -298,9 +298,9 @@ __Note:__ The default option is `never`.
 
 ### Configuring Metrics Reporter Statistics
 
-With This enabled the agent will pull from the kubernetes metrics-server, process the usage statistics and display them with log lines in the web app. 
+With this enabled the agent will pull from the kubernetes metrics-server, process the usage statistics and display them with log lines in the web app. 
 
-To control whether the LogDNA agent reports usage statistics `LOGDNA_LOG_REPORTER_METRICS` environment variable using on of these two values:
+To control whether the LogDNA agent reports usage statistics use the `LOGDNA_LOG_REPORTER_METRICS` environment variable with one of these two values:
 
 * `always` - Always report usage
 * `never` - Never report usage
