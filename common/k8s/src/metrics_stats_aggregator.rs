@@ -90,7 +90,7 @@ async fn process_reporter_info(
         &mut node_pod_counts_map,
         &mut node_container_counts_map,
     );
-    let pods_strings = print_pods(extended_pod_stats, controller_map);
+    let pods_strings = format_pod_str(extended_pod_stats, controller_map);
 
     build_node_metric_map(node_metrics, &mut node_usage_map);
     process_nodes(
@@ -100,10 +100,10 @@ async fn process_reporter_info(
         &mut node_pod_counts_map,
         &mut node_container_counts_map,
     );
-    let node_strings = print_nodes(&node_stats);
+    let node_strings = format_node_str(&node_stats);
 
     let cluster_stats = build_cluster_stats(&node_stats);
-    let cluster_stats_string = print_cluster_stats(&cluster_stats);
+    let cluster_stats_string = format_cluster_str(&cluster_stats);
 
     Ok((pods_strings, node_strings, cluster_stats_string))
 }
@@ -187,7 +187,7 @@ fn build_cluster_stats(node_stats: &Vec<NodeStats>) -> ClusterStats {
     cluster_stats
 }
 
-fn print_pods(
+fn format_pod_str(
     extended_pod_stats: Vec<ExtendedPodStats>,
     controller_map: HashMap<String, ControllerStats>,
 ) -> Vec<String> {
@@ -218,7 +218,7 @@ fn print_pods(
     pod_strings
 }
 
-fn print_nodes(nodes: &Vec<NodeStats>) -> Vec<String> {
+fn format_node_str(nodes: &Vec<NodeStats>) -> Vec<String> {
     let mut node_strings: Vec<String> = Vec::new();
     for node in nodes {
         let node_str = format!(
@@ -230,7 +230,7 @@ fn print_nodes(nodes: &Vec<NodeStats>) -> Vec<String> {
     node_strings
 }
 
-fn print_cluster_stats(cluster_stats: &ClusterStats) -> String {
+fn format_cluster_str(cluster_stats: &ClusterStats) -> String {
     let cluster_string = format!(
         r#"{{"kube":{}}}"#,
         serde_json::to_string(&cluster_stats).unwrap_or_else(|_| String::from(""))
