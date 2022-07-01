@@ -295,6 +295,7 @@ async fn create_agent_ds(
     enrich_logs_with_k8s: &str,
     agent_log_level: &str,
     agent_startup_lease: &str,
+    log_reporter_metrics: &str,
 ) {
     let sa = serde_json::from_value(serde_json::json!({
         "apiVersion": "v1",
@@ -471,6 +472,7 @@ async fn create_agent_ds(
         enrich_logs_with_k8s,
         agent_log_level,
         agent_startup_lease,
+        log_reporter_metrics,
     );
     //
     let dss: Api<DaemonSet> = Api::namespaced(client.clone(), agent_namespace);
@@ -527,6 +529,7 @@ fn get_agent_ds_yaml(
     enrich_logs_with_k8s: &str,
     log_level: &str,
     startup_lease: &str,
+    log_reporter_metrics: &str,
 ) -> DaemonSet {
     serde_json::from_value(serde_json::json!({
         "apiVersion": "apps/v1",
@@ -593,6 +596,10 @@ fn get_agent_ds_yaml(
                                 {
                                     "name": "LOGDNA_USE_K8S_LOG_ENRICHMENT",
                                     "value": enrich_logs_with_k8s,
+                                },
+                                {
+                                    "name": "LOGDNA_LOG_REPORTER_METRICS",
+                                    "value": log_reporter_metrics,
                                 },
                                 {
                                     "name": "POD_APP_LABEL",
@@ -924,6 +931,7 @@ async fn test_k8s_enrichment() {
             "always",
             "warn",
             "off",
+            "never",
         )
         .await;
 
@@ -1058,6 +1066,7 @@ async fn test_k8s_events_logged() {
             "always",
             "warn",
             "off",
+            "never",
         )
         .await;
 
@@ -1187,6 +1196,7 @@ async fn test_k8s_startup_leases_always_start() {
             "always",
             "info",
             "always",
+            "never",
         )
         .await;
         tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
@@ -1304,6 +1314,7 @@ async fn test_k8s_startup_leases_off_start() {
             "always",
             "info",
             "off",
+            "never",
         )
         .await;
         tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
@@ -1345,7 +1356,7 @@ async fn test_k8s_startup_leases_off_start() {
 }
 
 #[tokio::test]
-//#[cfg_attr(not(feature = "k8s_tests"), ignore)]
+#[cfg_attr(not(feature = "k8s_tests"), ignore)]
 async fn test_metric_stats_aggregator() {
     let _ = env_logger::Builder::from_default_env().try_init();
 
@@ -1384,7 +1395,7 @@ async fn test_metric_stats_aggregator() {
             80,
         )
         .await;
-        tokio::time::sleep(tokio::time::Duration::from_millis(30_000)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 
         create_agent_ds(
             client.clone(),
@@ -1395,9 +1406,10 @@ async fn test_metric_stats_aggregator() {
             "always",
             "info",
             "off",
+            "always",
         )
         .await;
-        tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(45000)).await;
 
         let map = received.lock().await;
 
@@ -1405,7 +1417,7 @@ async fn test_metric_stats_aggregator() {
         let mut found_node_log = false;
         let mut found_cluster_log = false;
         for (key, value) in map.iter() {
-            if !key.contains(agent_name) {
+            if !key.eq("logdna-reporter") {
                 continue;
             }
             for entry in &value.values {

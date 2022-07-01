@@ -212,6 +212,7 @@ fn print_pods(
             r#"{{"kube":{}}}"#,
             serde_json::to_string(&translated_pod_container).unwrap_or_else(|_| String::from(""))
         );
+
         pod_strings.push(display_str)
     }
     pod_strings
@@ -417,7 +418,10 @@ fn build_extended_pod_stat(
         )
         .build();
 
-        ExtendedPodStats::new(translated_pod.clone(), translated_container);
+        return Some(ExtendedPodStats::new(
+            translated_pod.clone(),
+            translated_container,
+        ));
     }
 
     None

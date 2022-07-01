@@ -94,7 +94,6 @@ subjects:
     namespace: logdna-agent
 ---
 apiVersion: apps/v1
-kind: DaemonSet
 metadata:
   name: logdna-agent
   namespace: logdna-agent
