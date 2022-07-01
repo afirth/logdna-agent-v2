@@ -165,10 +165,10 @@ impl ContainerStatsBuilder<'_> {
             last_terminated.and_then(|l| {
                 last_state = "Terminated".to_string();
                 if let Some(s) = l.started_at.as_ref() {
-                    s.0.timestamp_millis();
+                    last_started = Some(s.0.timestamp_millis());
                 }
                 if let Some(f) = l.finished_at.as_ref() {
-                    f.0.timestamp_millis();
+                    last_finished = Some(f.0.timestamp_millis());
                 }
                 l.reason.as_ref().map(|r| last_reason = r.to_string())
             });

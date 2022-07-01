@@ -331,18 +331,27 @@ fn process_pods(
                 continue;
             }
 
-            let extended_pod_stat = build_extended_pod_stat_and_update_container_counts(
+            let extended_pod_stat = build_extended_pod_stat(
                 &pod_usage_map,
                 container,
                 container_status,
-                node_container_counts_map,
-                &node,
                 &translated_pod,
-                false,
             );
 
             if let Some(..) = extended_pod_stat {
-                extended_pod_stats.push(extended_pod_stat.unwrap());
+                let extended_pod_stat = extended_pod_stat.unwrap();
+
+                let node_container_stat = node_container_counts_map
+                    .entry(node.to_string())
+                    .or_insert_with(NodeContainerStats::new);
+
+                node_container_stat.inc(
+                    &extended_pod_stat.container_stats.state,
+                    extended_pod_stat.container_stats.ready,
+                    false,
+                );
+
+                extended_pod_stats.push(extended_pod_stat);
             }
         }
 
@@ -365,31 +374,37 @@ fn process_pods(
                 continue;
             }
 
-            let extended_pod_stat = build_extended_pod_stat_and_update_container_counts(
+            let extended_pod_stat = build_extended_pod_stat(
                 &pod_usage_map,
                 init_container,
                 container_status,
-                node_container_counts_map,
-                &node,
                 &translated_pod,
-                true,
             );
 
             if let Some(..) = extended_pod_stat {
-                extended_pod_stats.push(extended_pod_stat.unwrap());
+                let extended_pod_stat = extended_pod_stat.unwrap();
+
+                let node_container_stat = node_container_counts_map
+                    .entry(node.to_string())
+                    .or_insert_with(NodeContainerStats::new);
+
+                node_container_stat.inc(
+                    &extended_pod_stat.container_stats.state,
+                    extended_pod_stat.container_stats.ready,
+                    true,
+                );
+
+                extended_pod_stats.push(extended_pod_stat);
             }
         }
     }
 }
 
-fn build_extended_pod_stat_and_update_container_counts(
+fn build_extended_pod_stat(
     pod_usage_map: &HashMap<String, Value>,
     container: &Container,
     container_status: Option<&ContainerStatus>,
-    node_container_counts_map: &mut HashMap<String, NodeContainerStats>,
-    node: &str,
     translated_pod: &PodStats,
-    init: bool,
 ) -> Option<ExtendedPodStats> {
     let usage = pod_usage_map.get(&container.name);
     if let Some(..) = usage {
@@ -401,16 +416,6 @@ fn build_extended_pod_stat_and_update_container_counts(
             usage.unwrap()["memory"].as_str().unwrap_or(""),
         )
         .build();
-
-        let node_container_stat = node_container_counts_map
-            .entry(node.to_string())
-            .or_insert_with(NodeContainerStats::new);
-
-        node_container_stat.inc(
-            &translated_container.state,
-            translated_container.ready,
-            init,
-        );
 
         ExtendedPodStats::new(translated_pod.clone(), translated_container);
     }
